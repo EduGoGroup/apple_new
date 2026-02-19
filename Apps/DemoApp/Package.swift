@@ -4,8 +4,8 @@ import PackageDescription
 let package = Package(
     name: "DemoApp",
     platforms: [
-        .iOS(.v18),
-        .macOS(.v15)
+        .iOS(.v26),
+        .macOS(.v26)
     ],
     dependencies: [
         .package(path: "../../Packages/Foundation"),
@@ -13,14 +13,18 @@ let package = Package(
         .package(path: "../../Packages/Infrastructure"),
         .package(path: "../../Packages/Domain"),
         .package(path: "../../Packages/Presentation"),
-        .package(path: "../../Packages/Features")
+        .package(path: "../../Packages/Features"),
+        .package(path: "../../Packages/DynamicUI")
     ],
     targets: [
         .executableTarget(
             name: "DemoApp",
             dependencies: [
                 .product(name: "EduPresentation", package: "Presentation"),
-                .product(name: "EduFeatures", package: "Features")
+                .product(name: "EduFeatures", package: "Features"),
+                .product(name: "EduDynamicUI", package: "DynamicUI"),
+                .product(name: "EduNetwork", package: "Infrastructure"),
+                .product(name: "EduModels", package: "Core")
             ],
             path: "Sources"
         )

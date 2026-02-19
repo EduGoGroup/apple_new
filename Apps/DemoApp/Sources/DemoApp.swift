@@ -1,54 +1,38 @@
 import SwiftUI
 import EduPresentation
-import EduFeatures
+import EduDynamicUI
+import EduNetwork
 
 @main
 struct DemoApp: App {
+    @State private var container = ServiceContainer()
+    @State private var currentRoute: AppRoute = .splash
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
-        }
-    }
-}
+            Group {
+                switch currentRoute {
+                case .splash:
+                    SplashView { isAuthenticated in
+                        currentRoute = isAuthenticated ? .main : .login
+                    }
 
-struct ContentView: View {
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
-                Text("EduGo Demo App")
-                    .font(.largeTitle)
+                case .login:
+                    LoginScreen(
+                        authService: container.authService,
+                        onLoginSuccess: { currentRoute = .main }
+                    )
 
-                Text("Migration Complete!")
-                    .font(.headline)
-
-                Text("All modules loaded successfully")
-                    .foregroundStyle(.secondary)
-
-                Divider()
-                    .padding(.vertical)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Loaded Modules:")
-                        .font(.headline)
-
-                    Text("- EduFoundation")
-                    Text("- EduCore")
-                    Text("- EduInfrastructure")
-                    Text("- EduDomain")
-                    Text("- EduPresentation")
-                    Text("- EduFeatures (AI, API, Analytics)")
+                case .main:
+                    MainScreen(
+                        screenLoader: container.screenLoader,
+                        dataLoader: container.dataLoader,
+                        networkClient: container.networkClient,
+                        onLogout: { currentRoute = .login }
+                    )
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(Color.secondary.opacity(0.1))
-                .cornerRadius(8)
             }
-            .padding()
-            .navigationTitle("EduGo")
+            .animation(.easeInOut, value: currentRoute)
         }
     }
-}
-
-#Preview {
-    ContentView()
 }

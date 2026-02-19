@@ -4,8 +4,8 @@ import PackageDescription
 let package = Package(
     name: "EduGoModules",
     platforms: [
-        .iOS(.v18),
-        .macOS(.v15)
+        .iOS(.v26),
+        .macOS(.v26)
     ],
     products: [
         // Umbrella para importar todo de una vez
@@ -17,7 +17,8 @@ let package = Package(
         .package(path: "Packages/Infrastructure"),
         .package(path: "Packages/Domain"),
         .package(path: "Packages/Presentation"),
-        .package(path: "Packages/Features")
+        .package(path: "Packages/Features"),
+        .package(path: "Packages/DynamicUI")
     ],
     targets: [
         // Umbrella target que reexporta todos los modulos
@@ -29,7 +30,8 @@ let package = Package(
                 .product(name: "EduInfrastructure", package: "Infrastructure"),
                 .product(name: "EduDomain", package: "Domain"),
                 .product(name: "EduPresentation", package: "Presentation"),
-                .product(name: "EduFeatures", package: "Features")
+                .product(name: "EduFeatures", package: "Features"),
+                .product(name: "EduDynamicUI", package: "DynamicUI")
             ]
         )
     ]
