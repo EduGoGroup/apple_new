@@ -13,6 +13,7 @@ final class DynamicScreenViewModel {
     private(set) var screenState: ScreenState = .loading
     private(set) var dataState: DataState = .idle
     var alertMessage: String?
+    var onLogout: (() -> Void)?
     private var currentOffset: Int = 0
 
     init(screenKey: String, screenLoader: ScreenLoader, dataLoader: DataLoader) {
@@ -87,7 +88,7 @@ final class DynamicScreenViewModel {
         case .refresh:
             Task { await refresh() }
         case .logout:
-            alertMessage = "Hola Mundo - Logout"
+            onLogout?()
         default:
             alertMessage = "Hola Mundo - \(action.id)"
         }

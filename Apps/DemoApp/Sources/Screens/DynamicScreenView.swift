@@ -47,6 +47,7 @@ struct DynamicScreenView: View {
                 screenContent(screen: screen)
             }
         }
+        .onAppear { viewModel.onLogout = onLogout }
         .task { await viewModel.loadScreen() }
         .alert("Acción", isPresented: showAlert) {
             Button("OK") {}

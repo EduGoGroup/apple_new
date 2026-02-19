@@ -22,9 +22,9 @@ struct MainScreen: View {
     ]
 
     private let screenKeys: [String: String] = [
-        "dashboard": "dashboard-home",
+        "dashboard": "dashboard-teacher",
         "materials": "materials-list",
-        "settings": "settings-main"
+        "settings": "app-settings"
     ]
 
     var body: some View {

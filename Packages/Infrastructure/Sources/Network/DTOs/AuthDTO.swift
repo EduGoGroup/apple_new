@@ -6,10 +6,7 @@ import Foundation
 ///
 /// Usado en `POST /v1/auth/login`.
 public struct LoginRequestDTO: Encodable, Sendable, Equatable {
-    /// Email del usuario.
     public let email: String
-
-    /// Contraseña del usuario.
     public let password: String
 
     public init(email: String, password: String) {
@@ -17,7 +14,6 @@ public struct LoginRequestDTO: Encodable, Sendable, Equatable {
         self.password = password
     }
 
-    /// Maps JSON snake_case keys to Swift camelCase properties.
     enum CodingKeys: String, CodingKey {
         case email
         case password
@@ -30,16 +26,33 @@ public struct LoginRequestDTO: Encodable, Sendable, Equatable {
 ///
 /// Respuesta de `POST /v1/auth/login`.
 public struct LoginResponseDTO: Decodable, Sendable, Equatable {
-    /// Token JWT de autenticación.
-    public let token: String
+    public let accessToken: String
+    public let expiresIn: Int
+    public let refreshToken: String
+    public let tokenType: String
+    public let user: AuthUserInfoDTO
+    public let activeContext: ActiveContextDTO
 
-    /// Datos del usuario autenticado.
-    public let user: ActiveContextDTO
-
-    /// Maps JSON snake_case keys to Swift camelCase properties.
     enum CodingKeys: String, CodingKey {
-        case token
+        case accessToken = "access_token"
+        case expiresIn = "expires_in"
+        case refreshToken = "refresh_token"
+        case tokenType = "token_type"
         case user
+        case activeContext = "active_context"
+    }
+}
+
+// MARK: - Auth User Info DTO
+
+/// Datos básicos del usuario autenticado.
+public struct AuthUserInfoDTO: Decodable, Sendable, Equatable {
+    public let id: String
+    public let email: String
+    public let name: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, email, name
     }
 }
 
@@ -47,27 +60,34 @@ public struct LoginResponseDTO: Decodable, Sendable, Equatable {
 
 /// Datos del contexto activo del usuario autenticado.
 public struct ActiveContextDTO: Decodable, Sendable, Equatable {
-    /// ID del usuario.
-    public let id: String
+    public let roleName: String
+    public let schoolId: String?
+    public let permissions: [String]?
 
-    /// Nombre del usuario.
-    public let firstName: String
-
-    /// Apellido del usuario.
-    public let lastName: String
-
-    /// Email del usuario.
-    public let email: String
-
-    /// Rol del usuario (e.g., "student", "teacher", "admin").
-    public let role: String
-
-    /// Maps JSON snake_case keys to Swift camelCase properties.
     enum CodingKeys: String, CodingKey {
-        case id
-        case firstName = "first_name"
-        case lastName = "last_name"
-        case email
-        case role
+        case roleName = "role_name"
+        case schoolId = "school_id"
+        case permissions
+    }
+}
+
+// MARK: - Stored Auth Token
+
+/// Token persistido para restaurar sesión.
+public struct StoredAuthToken: Codable, Sendable, Equatable {
+    public let accessToken: String
+    public let refreshToken: String
+    public let expiresIn: Int
+
+    public init(accessToken: String, refreshToken: String, expiresIn: Int) {
+        self.accessToken = accessToken
+        self.refreshToken = refreshToken
+        self.expiresIn = expiresIn
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case refreshToken = "refresh_token"
+        case expiresIn = "expires_in"
     }
 }

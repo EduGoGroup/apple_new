@@ -11,10 +11,26 @@ final class ServiceContainer {
     let authService: AuthService
 
     init() {
+        let adminBaseURL = "http://localhost:8081"
         let mobileBaseURL = "http://localhost:9091"
-        let adminBaseURL = "http://localhost:9090"
 
-        self.networkClient = NetworkClient()
+        // Plain network client for auth (no interceptors)
+        let plainNetworkClient = NetworkClient()
+        let authService = AuthService(
+            networkClient: plainNetworkClient,
+            adminBaseURL: adminBaseURL
+        )
+        self.authService = authService
+
+        // Authenticated network client with interceptor
+        let tokenProvider = SimpleTokenProvider(
+            getToken: { await authService.getAccessToken() },
+            refresh: { await authService.refreshToken() },
+            isExpired: { await authService.isTokenExpired() }
+        )
+        let authInterceptor = AuthenticationInterceptor.standard(tokenProvider: tokenProvider)
+        self.networkClient = NetworkClient(interceptors: [authInterceptor])
+
         self.screenLoader = ScreenLoader(
             networkClient: networkClient,
             baseURL: mobileBaseURL
@@ -22,10 +38,6 @@ final class ServiceContainer {
         self.dataLoader = DataLoader(
             networkClient: networkClient,
             adminBaseURL: adminBaseURL,
-            mobileBaseURL: mobileBaseURL
-        )
-        self.authService = AuthService(
-            networkClient: networkClient,
             mobileBaseURL: mobileBaseURL
         )
     }

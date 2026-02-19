@@ -13,7 +13,7 @@ struct DemoApp: App {
             Group {
                 switch currentRoute {
                 case .splash:
-                    SplashView { isAuthenticated in
+                    SplashView(authService: container.authService) { isAuthenticated in
                         currentRoute = isAuthenticated ? .main : .login
                     }
 
@@ -28,7 +28,10 @@ struct DemoApp: App {
                         screenLoader: container.screenLoader,
                         dataLoader: container.dataLoader,
                         networkClient: container.networkClient,
-                        onLogout: { currentRoute = .login }
+                        onLogout: {
+                            Task { await container.authService.logout() }
+                            currentRoute = .login
+                        }
                     )
                 }
             }
