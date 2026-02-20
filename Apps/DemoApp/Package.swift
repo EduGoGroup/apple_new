@@ -23,7 +23,7 @@ let package = Package(
                 .product(name: "EduDynamicUI", package: "DynamicUI"),
                 .product(name: "EduNetwork", package: "Infrastructure"),
                 .product(name: "EduStorage", package: "Infrastructure"),
-                .product(name: "EduModels", package: "Core")
+                .product(name: "EduCore", package: "Core")
             ],
             path: "Sources"
         )

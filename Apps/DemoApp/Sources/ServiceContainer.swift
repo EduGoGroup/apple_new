@@ -1,3 +1,4 @@
+import EduCore
 import EduNetwork
 import EduDynamicUI
 import Observation
@@ -9,16 +10,17 @@ final class ServiceContainer {
     let screenLoader: ScreenLoader
     let dataLoader: DataLoader
     let authService: AuthService
+    let apiConfiguration: APIConfiguration
 
-    init() {
-        let adminBaseURL = "http://localhost:8081"
-        let mobileBaseURL = "http://localhost:9091"
+    init(environment: AppEnvironment = .detect()) {
+        let config = APIConfiguration.forEnvironment(environment)
+        self.apiConfiguration = config
 
         // Plain network client for auth (no interceptors)
         let plainNetworkClient = NetworkClient()
         let authService = AuthService(
             networkClient: plainNetworkClient,
-            adminBaseURL: adminBaseURL
+            adminBaseURL: config.adminBaseURL
         )
         self.authService = authService
 
@@ -33,12 +35,12 @@ final class ServiceContainer {
 
         self.screenLoader = ScreenLoader(
             networkClient: networkClient,
-            baseURL: mobileBaseURL
+            baseURL: config.mobileBaseURL
         )
         self.dataLoader = DataLoader(
             networkClient: networkClient,
-            adminBaseURL: adminBaseURL,
-            mobileBaseURL: mobileBaseURL
+            adminBaseURL: config.adminBaseURL,
+            mobileBaseURL: config.mobileBaseURL
         )
     }
 }
