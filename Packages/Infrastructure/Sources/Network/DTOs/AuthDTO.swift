@@ -49,10 +49,17 @@ public struct LoginResponseDTO: Decodable, Sendable, Equatable {
 public struct AuthUserInfoDTO: Decodable, Sendable, Equatable {
     public let id: String
     public let email: String
-    public let name: String
+    public let firstName: String
+    public let lastName: String
+    public let fullName: String
+    public let schoolId: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, email, name
+        case id, email
+        case firstName = "first_name"
+        case lastName = "last_name"
+        case fullName = "full_name"
+        case schoolId = "school_id"
     }
 }
 
