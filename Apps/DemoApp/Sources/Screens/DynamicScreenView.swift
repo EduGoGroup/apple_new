@@ -5,6 +5,7 @@ import EduModels
 import EduNetwork
 
 struct DynamicScreenView: View {
+    let screenKey: String
     @State private var viewModel: DynamicScreenViewModel
     let onLogout: (() -> Void)?
 
@@ -15,9 +16,9 @@ struct DynamicScreenView: View {
         networkClient: NetworkClient,
         onLogout: (() -> Void)? = nil
     ) {
+        self.screenKey = screenKey
         self._viewModel = State(
             initialValue: DynamicScreenViewModel(
-                screenKey: screenKey,
                 screenLoader: screenLoader,
                 dataLoader: dataLoader
             )
@@ -40,7 +41,7 @@ struct DynamicScreenView: View {
 
             case .error(let message):
                 EduErrorStateView(message: message) {
-                    Task { await viewModel.loadScreen() }
+                    Task { await viewModel.loadScreen(key: screenKey) }
                 }
 
             case .ready(let screen):
@@ -48,7 +49,7 @@ struct DynamicScreenView: View {
             }
         }
         .onAppear { viewModel.onLogout = onLogout }
-        .task { await viewModel.loadScreen() }
+        .task(id: screenKey) { await viewModel.loadScreen(key: screenKey) }
         .alert("Acción", isPresented: showAlert) {
             Button("OK") {}
         } message: {

@@ -70,6 +70,7 @@ public struct LoginScreen: View {
             Spacer()
         }
         .padding()
+        .frame(maxWidth: 400)
     }
 
     // MARK: - Actions

@@ -8,7 +8,6 @@ import Observation
 final class DynamicScreenViewModel {
     private let screenLoader: ScreenLoader
     private let dataLoader: DataLoader
-    let screenKey: String
 
     private(set) var screenState: ScreenState = .loading
     private(set) var dataState: DataState = .idle
@@ -16,16 +15,16 @@ final class DynamicScreenViewModel {
     var onLogout: (() -> Void)?
     private var currentOffset: Int = 0
 
-    init(screenKey: String, screenLoader: ScreenLoader, dataLoader: DataLoader) {
-        self.screenKey = screenKey
+    init(screenLoader: ScreenLoader, dataLoader: DataLoader) {
         self.screenLoader = screenLoader
         self.dataLoader = dataLoader
     }
 
-    func loadScreen() async {
+    func loadScreen(key: String) async {
         screenState = .loading
+        dataState = .idle
         do {
-            let screen = try await screenLoader.loadScreen(key: screenKey)
+            let screen = try await screenLoader.loadScreen(key: key)
             screenState = .ready(screen)
             if screen.dataEndpoint != nil {
                 await loadData(screen: screen)

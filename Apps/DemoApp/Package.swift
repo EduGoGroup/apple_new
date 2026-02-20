@@ -8,10 +8,8 @@ let package = Package(
         .macOS(.v26)
     ],
     dependencies: [
-        .package(path: "../../Packages/Foundation"),
         .package(path: "../../Packages/Core"),
         .package(path: "../../Packages/Infrastructure"),
-        .package(path: "../../Packages/Domain"),
         .package(path: "../../Packages/Presentation"),
         .package(path: "../../Packages/Features"),
         .package(path: "../../Packages/DynamicUI")

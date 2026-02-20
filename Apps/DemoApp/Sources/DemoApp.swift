@@ -3,8 +3,31 @@ import EduPresentation
 import EduDynamicUI
 import EduNetwork
 
+#if canImport(AppKit)
+import AppKit
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // SPM executables no tienen activation policy por defecto.
+        // Sin .regular, macOS no trata la app como GUI y no le da key window.
+        NSApplication.shared.setActivationPolicy(.regular)
+        NSApplication.shared.activate()
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        if let window = NSApplication.shared.windows.first, !window.isKeyWindow {
+            window.makeKeyAndOrderFront(nil)
+        }
+    }
+}
+#endif
+
 @main
 struct DemoApp: App {
+    #if canImport(AppKit)
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    #endif
+
     @State private var container = ServiceContainer()
     @State private var currentRoute: AppRoute = .splash
 
@@ -37,5 +60,12 @@ struct DemoApp: App {
             }
             .animation(.easeInOut, value: currentRoute)
         }
+        #if os(macOS)
+        .defaultSize(width: 900, height: 600)
+        .commands {
+            // Garantizar menus de edicion de texto (Cut/Copy/Paste/Select All)
+            TextEditingCommands()
+        }
+        #endif
     }
 }
