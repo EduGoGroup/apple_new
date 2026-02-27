@@ -92,12 +92,10 @@ public final class UserProfileViewModel {
     // MARK: - Task Management
 
     /// Task de carga inicial para cancelación en cleanup
-    /// Marcado como nonisolated(unsafe) para acceso desde deinit
-    nonisolated(unsafe) private var initializationTask: Task<Void, Never>?
+    private var initializationTask: Task<Void, Never>?
 
     /// IDs de suscripciones a eventos (para cleanup)
-    /// Marcado como nonisolated(unsafe) para acceso desde deinit
-    nonisolated(unsafe) private var subscriptionIds: [UUID] = []
+    private var subscriptionIds: [UUID] = []
 
     // MARK: - Initialization
 
@@ -121,24 +119,6 @@ public final class UserProfileViewModel {
             await subscribeToEvents()
             await loadProfile()
         }
-    }
-
-    // MARK: - Deinitialization
-
-    /// Limpia recursos al destruir el ViewModel
-    deinit {
-        // Cancelar tasks en progreso
-        initializationTask?.cancel()
-
-        // Cancelar suscripciones a eventos
-        for subscriptionId in subscriptionIds {
-            Task { [eventBus] in
-                await eventBus.unsubscribe(subscriptionId)
-            }
-        }
-
-        let subscriptionCount = self.subscriptionIds.count
-        logger.debug("UserProfileViewModel deinicializado - \(subscriptionCount, privacy: .public) suscripciones canceladas")
     }
 
     // MARK: - Public Methods

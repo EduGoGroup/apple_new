@@ -46,6 +46,8 @@ struct DemoApp: App {
 
     @State private var container = ServiceContainer()
     @State private var currentRoute: AppRoute = .splash
+    @State private var isOnline: Bool = true
+    @State private var deepLinkHandler = DeepLinkHandler()
 
     var body: some Scene {
         WindowGroup {
@@ -84,7 +86,7 @@ struct DemoApp: App {
                     )
 
                 case .main:
-                    MainScreen(container: container)
+                    MainScreen(container: container, deepLinkHandler: deepLinkHandler)
                         .task {
                             for await event in await container.authService.sessionStream {
                                 debugLog("DEBUG [Session] event: \(event)")
@@ -96,6 +98,24 @@ struct DemoApp: App {
                 }
             }
             .animation(.easeInOut, value: currentRoute)
+            .environment(container.toastManager)
+            .environment(container.glossaryProvider)
+            .environment(\.isOnline, isOnline)
+            .environment(\.eventOrchestrator, container.eventOrchestrator)
+            .eduOverlays()
+            .task { await startConnectivityObserver() }
+            .onOpenURL { url in
+                debugLog("DEBUG [DeepLink] received URL: \(url)")
+                if currentRoute == .main {
+                    if let link = deepLinkHandler.handle(url: url) {
+                        debugLog("DEBUG [DeepLink] navigating immediately to: \(link.screenKey)")
+                        deepLinkHandler.pendingDeepLink = link
+                    }
+                } else {
+                    debugLog("DEBUG [DeepLink] storing pending (not authenticated)")
+                    deepLinkHandler.storePending(url: url)
+                }
+            }
         }
         #if os(macOS)
         .defaultSize(width: 900, height: 600)
@@ -103,5 +123,14 @@ struct DemoApp: App {
             TextEditingCommands()
         }
         #endif
+    }
+
+    // MARK: - Connectivity
+
+    private func startConnectivityObserver() async {
+        await container.connectivitySyncManager.startObserving()
+        for await online in await container.connectivitySyncManager.isOnlineStream {
+            isOnline = online
+        }
     }
 }

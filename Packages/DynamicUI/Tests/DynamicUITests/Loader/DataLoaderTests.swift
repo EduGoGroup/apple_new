@@ -177,4 +177,98 @@ struct DataLoaderTests {
             _ = try await loader.loadData(endpoint: "/api/v1/data", config: nil)
         }
     }
+
+    // MARK: - Offline Mode Tests
+
+    @Test("Offline returns cached data as stale")
+    func offlineReturnsCachedData() async throws {
+        let mock = await makeMockWithResponse()
+        let loader = makeLoader(mock: mock)
+
+        // Load data while online to populate cache
+        _ = try await loader.loadData(endpoint: "/api/v1/data", config: nil)
+
+        // Go offline
+        await loader.setOnline(false)
+
+        // Should return cached data marked as stale
+        let result = try await loader.loadDataWithResult(endpoint: "/api/v1/data", config: nil, params: nil)
+        #expect(result.isStale == true)
+
+        // No additional network request should be made
+        let requestCount = await mock.requestCount
+        #expect(requestCount == 1)
+    }
+
+    @Test("Offline with no cache throws network error")
+    func offlineNoCacheThrows() async {
+        let mock = MockNetworkClient()
+        let loader = makeLoader(mock: mock)
+
+        await loader.setOnline(false)
+
+        await #expect(throws: Error.self) {
+            _ = try await loader.loadDataWithResult(endpoint: "/api/v1/unknown", config: nil, params: nil)
+        }
+    }
+
+    @Test("Online fetch failure falls back to cache as stale")
+    func onlineFailureFallsBackToCache() async throws {
+        let mock = await makeMockWithResponse()
+        let loader = makeLoader(mock: mock)
+
+        // Populate cache
+        _ = try await loader.loadData(endpoint: "/api/v1/data", config: nil)
+
+        // Set error for next request
+        await mock.setError(NetworkError.timeout)
+
+        // Should fall back to cached data
+        let result = try await loader.loadDataWithResult(endpoint: "/api/v1/data", config: nil, params: nil)
+        #expect(result.isStale == true)
+    }
+
+    @Test("Online fresh data is not stale")
+    func onlineFreshDataNotStale() async throws {
+        let mock = await makeMockWithResponse()
+        let loader = makeLoader(mock: mock)
+
+        let result = try await loader.loadDataWithResult(endpoint: "/api/v1/data", config: nil, params: nil)
+        #expect(result.isStale == false)
+    }
+
+    @Test("clearCache removes all cached entries")
+    func clearCacheRemovesAll() async throws {
+        let mock = await makeMockWithResponse()
+        let loader = makeLoader(mock: mock)
+
+        // Populate cache
+        _ = try await loader.loadData(endpoint: "/api/v1/data", config: nil)
+
+        // Clear
+        await loader.clearCache()
+
+        // Go offline - should throw since cache is empty
+        await loader.setOnline(false)
+        await #expect(throws: Error.self) {
+            _ = try await loader.loadDataWithResult(endpoint: "/api/v1/data", config: nil, params: nil)
+        }
+    }
+
+    @Test("setOnline updates isOnline property")
+    func setOnlineUpdatesProperty() async {
+        let mock = MockNetworkClient()
+        let loader = makeLoader(mock: mock)
+
+        let initial = await loader.isOnline
+        #expect(initial == true)
+
+        await loader.setOnline(false)
+        let offline = await loader.isOnline
+        #expect(offline == false)
+
+        await loader.setOnline(true)
+        let online = await loader.isOnline
+        #expect(online == true)
+    }
 }

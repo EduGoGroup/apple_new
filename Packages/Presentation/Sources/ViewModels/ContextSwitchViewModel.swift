@@ -115,8 +115,7 @@ public final class ContextSwitchViewModel {
     // MARK: - Task Management
 
     /// Task de carga inicial de contextos para cancelación en cleanup
-    /// Marcado como nonisolated(unsafe) para acceso desde deinit
-    nonisolated(unsafe) private var contextLoadTask: Task<Void, Never>?
+    private var contextLoadTask: Task<Void, Never>?
 
     // MARK: - Initialization
 
@@ -142,16 +141,6 @@ public final class ContextSwitchViewModel {
         contextLoadTask = Task {
             await loadAvailableContexts()
         }
-    }
-
-    // MARK: - Deinitialization
-
-    /// Limpia recursos al destruir el ViewModel
-    deinit {
-        // Cancelar tasks en progreso
-        contextLoadTask?.cancel()
-
-        logger.debug("ContextSwitchViewModel deinicializado - recursos limpiados")
     }
 
     // MARK: - Load Contexts

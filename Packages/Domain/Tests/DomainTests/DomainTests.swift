@@ -1,36 +1,32 @@
-import XCTest
+import Testing
 @testable import EduDomain
 import EduFoundation
 import EduCore
 
-/// Tests básicos para verificar que EduDomain carga correctamente.
-final class DomainTests: XCTestCase {
-    
-    func testDomainModuleLoads() {
-        // Verificar que el módulo carga
-        XCTAssertEqual(EduDomain.version, "2.0.0")
+@Suite
+struct DomainTests {
+
+    @Test func domainModuleLoads() {
+        #expect(EduDomain.version == "2.0.0")
     }
-    
-    func testCQRSCommandProtocol() {
+
+    @Test func cqrsCommandProtocol() {
         // Verificar que el protocolo Command está disponible
-        XCTAssertTrue(true, "CQRS Command protocol is available")
+        #expect(true)
     }
-    
-    func testMaterialTypeAvailable() {
-        // Verificar que MaterialType está disponible
+
+    @Test func materialTypeAvailable() {
         let videoType = MaterialType.video
-        XCTAssertEqual(videoType.rawValue, "video")
+        #expect(videoType.rawValue == "video")
     }
-    
-    func testSystemRoleAvailable() {
-        // Verificar que SystemRole está disponible
+
+    @Test func systemRoleAvailable() {
         let adminRole = SystemRole.admin
-        XCTAssertNotNil(adminRole)
+        #expect(adminRole == .admin)
     }
-    
-    func testTakeAssessmentFlowStateAvailable() {
-        // Verificar que TakeAssessmentFlowState está disponible
+
+    @Test func takeAssessmentFlowStateAvailable() {
         let idle = TakeAssessmentFlowState.idle
-        XCTAssertEqual(idle.rawValue, "idle")
+        #expect(idle.rawValue == "idle")
     }
 }
