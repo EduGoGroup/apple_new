@@ -38,6 +38,12 @@ public struct UserDataBundle: Sendable, Equatable, Codable {
     /// Hashes de cada bucket para delta sync.
     public let hashes: [String: String]
 
+    /// Glosario dinámico (term_key → valor localizado).
+    public let glossary: [String: String]
+
+    /// Strings traducidos del servidor (string_key → valor traducido).
+    public let strings: [String: String]
+
     /// Momento en que se sincronizaron los datos.
     public let syncedAt: Date
 
@@ -49,6 +55,8 @@ public struct UserDataBundle: Sendable, Equatable, Codable {
         screens: [String: ScreenBundleDTO],
         availableContexts: [UserContextDTO],
         hashes: [String: String],
+        glossary: [String: String] = [:],
+        strings: [String: String] = [:],
         syncedAt: Date = Date()
     ) {
         self.menu = menu
@@ -56,6 +64,8 @@ public struct UserDataBundle: Sendable, Equatable, Codable {
         self.screens = screens
         self.availableContexts = availableContexts
         self.hashes = hashes
+        self.glossary = glossary
+        self.strings = strings
         self.syncedAt = syncedAt
     }
 }
@@ -71,6 +81,8 @@ extension UserDataBundle {
             screens: response.screens,
             availableContexts: response.availableContexts,
             hashes: response.hashes,
+            glossary: response.glossary ?? [:],
+            strings: response.strings ?? [:],
             syncedAt: Date.now
         )
     }

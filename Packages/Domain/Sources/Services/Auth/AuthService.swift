@@ -102,7 +102,7 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
     /// - Throws: Error de red o autenticación.
     @discardableResult
     public func login(email: String, password: String) async throws -> EduModels.LoginResponseDTO {
-        let url = "\(apiConfig.adminBaseURL)/v1/auth/login"
+        let url = "\(apiConfig.iamBaseURL)/api/v1/auth/login"
         let body = EduModels.LoginRequestDTO(email: email, password: password)
         let response: EduModels.LoginResponseDTO = try await networkClient.post(url, body: body)
 
@@ -186,7 +186,7 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
     public func switchContext(_ contextDTO: UserContextDTO) async throws {
         guard let token = currentToken else { return }
 
-        let url = "\(apiConfig.adminBaseURL)/v1/auth/switch-context"
+        let url = "\(apiConfig.iamBaseURL)/api/v1/auth/switch-context"
         let body = SwitchContextRequestDTO(
             schoolId: contextDTO.schoolId ?? "",
             roleId: contextDTO.roleId
@@ -221,7 +221,7 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
         defer { isRefreshing = false }
 
         do {
-            let url = "\(apiConfig.adminBaseURL)/v1/auth/refresh"
+            let url = "\(apiConfig.iamBaseURL)/api/v1/auth/refresh"
             let body = RefreshTokenRequestDTO(refreshToken: token.refreshToken)
             let response: RefreshTokenResponseDTO = try await networkClient.post(url, body: body)
 

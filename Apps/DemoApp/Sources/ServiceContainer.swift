@@ -22,6 +22,10 @@ final class ServiceContainer {
     let syncService: SyncService
     let localSyncStore: LocalSyncStore
 
+    // MARK: - Menu
+
+    let menuService: MenuService
+
     // MARK: - DynamicUI
 
     let screenLoader: ScreenLoader
@@ -60,14 +64,17 @@ final class ServiceContainer {
         let localSyncStore = LocalSyncStore()
         self.localSyncStore = localSyncStore
 
-        // 5. SyncService (usa authenticated client + local store)
+        // 5. MenuService
+        self.menuService = MenuService()
+
+        // 6. SyncService (usa authenticated client + local store)
         self.syncService = SyncService(
             networkClient: authenticatedClient,
             localStore: localSyncStore,
             apiConfig: config
         )
 
-        // 6. DynamicUI loaders (usan authenticated client)
+        // 7. DynamicUI loaders (usan authenticated client)
         self.screenLoader = ScreenLoader(
             networkClient: authenticatedClient,
             baseURL: config.mobileBaseURL
