@@ -35,12 +35,16 @@ public struct APIConfiguration: Sendable {
 
     /// Claves de variables de entorno soportadas.
     public enum Key: String, CaseIterable {
+        case iamURL = "EDUGO_IAM_API_URL"
         case adminURL = "EDUGO_ADMIN_API_URL"
         case mobileURL = "EDUGO_MOBILE_API_URL"
         case timeout = "EDUGO_API_TIMEOUT"
     }
 
     // MARK: - Properties
+
+    /// URL base de la API IAM Platform (auth, roles, permisos, menu).
+    public let iamBaseURL: String
 
     /// URL base de la API de administracion.
     public let adminBaseURL: String
@@ -57,11 +61,13 @@ public struct APIConfiguration: Sendable {
     // MARK: - Initialization
 
     public init(
+        iamBaseURL: String,
         adminBaseURL: String,
         mobileBaseURL: String,
         timeout: TimeInterval = 60,
         environment: AppEnvironment = .detect()
     ) {
+        self.iamBaseURL = iamBaseURL
         self.adminBaseURL = adminBaseURL
         self.mobileBaseURL = mobileBaseURL
         self.timeout = timeout
@@ -80,6 +86,8 @@ public struct APIConfiguration: Sendable {
         let preset = preset(for: environment)
         let processInfo = ProcessInfo.processInfo
 
+        let iamURL = processInfo.environment[Key.iamURL.rawValue]
+            ?? preset.iamBaseURL
         let adminURL = processInfo.environment[Key.adminURL.rawValue]
             ?? preset.adminBaseURL
         let mobileURL = processInfo.environment[Key.mobileURL.rawValue]
@@ -89,6 +97,7 @@ public struct APIConfiguration: Sendable {
             ?? preset.timeout
 
         return APIConfiguration(
+            iamBaseURL: iamURL,
             adminBaseURL: adminURL,
             mobileBaseURL: mobileURL,
             timeout: timeout,
@@ -111,22 +120,25 @@ public struct APIConfiguration: Sendable {
 
     /// Desarrollo local: localhost.
     public static let development = APIConfiguration(
-        adminBaseURL: "http://localhost:8081",
-        mobileBaseURL: "http://localhost:9091",
+        iamBaseURL: "http://localhost:8070",
+        adminBaseURL: "http://localhost:8060",
+        mobileBaseURL: "http://localhost:8065",
         timeout: 30,
         environment: .development
     )
 
     /// Staging: Azure Container Apps.
     public static let staging = APIConfiguration(
-        adminBaseURL: "https://edugo-api-admin.wittyhill-f6d656fb.eastus.azurecontainerapps.io",
-        mobileBaseURL: "https://edugo-api-mobile.wittyhill-f6d656fb.eastus.azurecontainerapps.io",
+        iamBaseURL: "https://edugo-api-iam-platform.wittyhill-f6d656fb.eastus.azurecontainerapps.io",
+        adminBaseURL: "https://edugo-api-admin-new.wittyhill-f6d656fb.eastus.azurecontainerapps.io",
+        mobileBaseURL: "https://edugo-api-mobile-new.wittyhill-f6d656fb.eastus.azurecontainerapps.io",
         timeout: 60,
         environment: .staging
     )
 
     /// Produccion: URLs de produccion.
     public static let production = APIConfiguration(
+        iamBaseURL: "https://api-iam.edugo.com",
         adminBaseURL: "https://api.edugo.com",
         mobileBaseURL: "https://api-mobile.edugo.com",
         timeout: 60,
@@ -138,6 +150,6 @@ public struct APIConfiguration: Sendable {
 
 extension APIConfiguration: CustomStringConvertible {
     public var description: String {
-        "APIConfiguration(env: \(environment), admin: \(adminBaseURL), mobile: \(mobileBaseURL), timeout: \(timeout)s)"
+        "APIConfiguration(env: \(environment), iam: \(iamBaseURL), admin: \(adminBaseURL), mobile: \(mobileBaseURL), timeout: \(timeout)s)"
     }
 }
