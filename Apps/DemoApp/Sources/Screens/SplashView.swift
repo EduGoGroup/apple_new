@@ -27,34 +27,51 @@ struct SplashView: View {
 
     private func performStartup() async {
         // 1. Restaurar sesion
+        debugLog("DEBUG [Splash] restoring session...")
         let isAuthenticated = await authService.restoreSession()
+        debugLog("DEBUG [Splash] restoreSession result: \(isAuthenticated)")
 
         guard isAuthenticated else {
             // Sin sesion → Login
+            debugLog("DEBUG [Splash] not authenticated → login")
             onFinished(false)
             return
         }
 
         // 2. Restaurar bundle local → pre-popular cache
-        if let localBundle = await syncService.restoreFromLocal() {
+        let localBundle = await syncService.restoreFromLocal()
+        debugLog("DEBUG [Splash] local bundle: \(localBundle != nil ? "found (menu: \(localBundle!.menu.count))" : "nil")")
+
+        if let localBundle {
             await screenLoader.seedFromBundle(screens: localBundle.screens)
         }
 
-        // 3. En paralelo: splash delay + delta sync en background
+        // 3. Sync: fullSync if no bundle, deltaSync if we have one
         await withTaskGroup(of: Void.self) { group in
             // Splash minimo 1.5s
             group.addTask {
                 try? await Task.sleep(for: .seconds(1.5))
             }
 
-            // Delta sync en background (best-effort)
             group.addTask {
-                if let bundle = await syncService.currentBundle {
-                    _ = try? await syncService.deltaSync(currentHashes: bundle.hashes)
-
-                    // Re-seed cache si delta trajo cambios
-                    if let updatedBundle = await syncService.currentBundle {
-                        await screenLoader.seedFromBundle(screens: updatedBundle.screens)
+                if localBundle != nil {
+                    // Delta sync — ya tenemos bundle
+                    debugLog("DEBUG [Splash] doing deltaSync...")
+                    if let bundle = await syncService.currentBundle {
+                        _ = try? await syncService.deltaSync(currentHashes: bundle.hashes)
+                        if let updatedBundle = await syncService.currentBundle {
+                            await screenLoader.seedFromBundle(screens: updatedBundle.screens)
+                        }
+                    }
+                } else {
+                    // Full sync — no tenemos bundle local
+                    debugLog("DEBUG [Splash] no local bundle → doing fullSync...")
+                    do {
+                        let bundle = try await syncService.fullSync()
+                        debugLog("DEBUG [Splash] fullSync OK — menu: \(bundle.menu.count), screens: \(bundle.screens.count)")
+                        await screenLoader.seedFromBundle(screens: bundle.screens)
+                    } catch {
+                        debugLog("DEBUG [Splash] fullSync FAILED: \(error)")
                     }
                 }
             }
@@ -63,6 +80,7 @@ struct SplashView: View {
         }
 
         // 4. Navegar a Main con todo pre-cargado
+        debugLog("DEBUG [Splash] navigating to main")
         onFinished(true)
     }
 }

@@ -41,7 +41,9 @@ public final class ToastManager: Sendable {
 
     public func show(_ message: String, style: ToastStyle = .info, duration: TimeInterval = 3.0) {
         let toast = ToastItem(message: message, style: style, duration: duration)
-        toasts.append(toast)
+        withAnimation(.spring(duration: 0.4, bounce: 0.3)) {
+            toasts.append(toast)
+        }
 
         // VoiceOver announcement based on style
         let priority: AnnouncementPriority = style == .error ? .high : .medium
@@ -54,7 +56,27 @@ public final class ToastManager: Sendable {
     }
 
     public func dismiss(_ toast: ToastItem) {
-        toasts.removeAll { $0.id == toast.id }
+        withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+            toasts.removeAll { $0.id == toast.id }
+        }
+    }
+
+    // MARK: - Convenience Methods
+
+    public func showSuccess(_ message: String, duration: TimeInterval = 3.0) {
+        show(message, style: .success, duration: duration)
+    }
+
+    public func showError(_ message: String, duration: TimeInterval = 4.0) {
+        show(message, style: .error, duration: duration)
+    }
+
+    public func showWarning(_ message: String, duration: TimeInterval = 3.5) {
+        show(message, style: .warning, duration: duration)
+    }
+
+    public func showInfo(_ message: String, duration: TimeInterval = 3.0) {
+        show(message, style: .info, duration: duration)
     }
 }
 
@@ -68,6 +90,12 @@ public struct ToastItem: Identifiable, Sendable {
 public struct EduToast: View {
     let item: ToastItem
     let onDismiss: () -> Void
+    @State private var dragOffset: CGFloat = 0
+
+    public init(item: ToastItem, onDismiss: @escaping () -> Void) {
+        self.item = item
+        self.onDismiss = onDismiss
+    }
 
     public var body: some View {
         HStack(spacing: DesignTokens.Spacing.medium) {
@@ -84,14 +112,33 @@ public struct EduToast: View {
             .accessibilityLabel("Dismiss")
         }
         .padding()
-        .background(.regularMaterial)
-        .cornerRadius(DesignTokens.CornerRadius.xl)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.xl))
         .shadow(radius: DesignTokens.Shadow.medium)
         .padding(.horizontal)
+        .offset(y: dragOffset)
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    if value.translation.height < 0 {
+                        dragOffset = value.translation.height
+                    }
+                }
+                .onEnded { value in
+                    if value.translation.height < -50 {
+                        onDismiss()
+                    } else {
+                        withAnimation(.spring(duration: 0.3)) {
+                            dragOffset = 0
+                        }
+                    }
+                }
+        )
+        .transition(.move(edge: .top).combined(with: .opacity))
         // MARK: - Accessibility
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(item.style.accessibilityPrefix): \(item.message)")
         .accessibilityAddTraits(.isStaticText)
+        .accessibilityAction(named: "Dismiss") { onDismiss() }
         // MARK: - Keyboard Navigation
         .skipInTabOrder()
     }

@@ -31,6 +31,11 @@ final class ServiceContainer {
     let screenLoader: ScreenLoader
     let dataLoader: DataLoader
 
+    // MARK: - Contracts
+
+    let contractRegistry: ContractRegistry
+    let eventOrchestrator: EventOrchestrator
+
     // MARK: - Config
 
     let apiConfiguration: APIConfiguration
@@ -83,6 +88,16 @@ final class ServiceContainer {
             networkClient: authenticatedClient,
             adminBaseURL: config.adminBaseURL,
             mobileBaseURL: config.mobileBaseURL
+        )
+
+        // 8. Contract registry + orchestrator
+        let registry = ContractRegistry()
+        registry.registerDefaults()
+        self.contractRegistry = registry
+        self.eventOrchestrator = EventOrchestrator(
+            registry: registry,
+            networkClient: authenticatedClient,
+            dataLoader: self.dataLoader
         )
     }
 }

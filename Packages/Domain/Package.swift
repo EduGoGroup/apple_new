@@ -13,7 +13,8 @@ let package = Package(
     dependencies: [
         .package(path: "../Foundation"),
         .package(path: "../Core"),
-        .package(path: "../Infrastructure")
+        .package(path: "../Infrastructure"),
+        .package(path: "../DynamicUI")
     ],
     targets: [
         .target(
@@ -21,7 +22,8 @@ let package = Package(
             dependencies: [
                 .product(name: "EduFoundation", package: "Foundation"),
                 .product(name: "EduCore", package: "Core"),
-                .product(name: "EduInfrastructure", package: "Infrastructure")
+                .product(name: "EduInfrastructure", package: "Infrastructure"),
+                .product(name: "EduDynamicUI", package: "DynamicUI")
             ],
             path: "Sources"
         ),
@@ -31,7 +33,8 @@ let package = Package(
                 "EduDomain",
                 .product(name: "EduFoundation", package: "Foundation"),
                 .product(name: "EduCore", package: "Core"),
-                .product(name: "EduInfrastructure", package: "Infrastructure")
+                .product(name: "EduInfrastructure", package: "Infrastructure"),
+                .product(name: "EduDynamicUI", package: "DynamicUI")
             ],
             path: "Tests"
         )
