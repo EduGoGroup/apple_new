@@ -1,7 +1,7 @@
 import Testing
 @testable import EduPresentation
 
-@Suite("ToastManager")
+@Suite("ToastManager", .serialized)
 struct ToastTests {
 
     @Test("ToastManager shared instance exists")

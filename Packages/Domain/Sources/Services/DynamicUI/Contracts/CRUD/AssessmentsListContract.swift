@@ -16,7 +16,8 @@ public struct AssessmentsListContract: ScreenContract {
             return "mobile:/api/v1/materials/\(materialId)/assessment"
         case .search:
             let query = context.searchQuery ?? ""
-            return "mobile:/api/v1/materials/assessment?search=\(query)"
+            let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            return "mobile:/api/v1/materials/assessment?search=\(encoded)"
         default:
             return nil
         }

@@ -105,6 +105,7 @@ struct ListPatternRenderer: View {
                 searchTask = Task {
                     try? await Task.sleep(for: .milliseconds(300))
                     guard !Task.isCancelled else { return }
+                    viewModel.searchQuery = newValue
                     await viewModel.executeEvent(.search)
                 }
             }

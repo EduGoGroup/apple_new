@@ -119,12 +119,12 @@ public struct EduToast: View {
         .gesture(
             DragGesture()
                 .onChanged { value in
-                    if value.translation.height > 0 {
+                    if value.translation.height < 0 {
                         dragOffset = value.translation.height
                     }
                 }
                 .onEnded { value in
-                    if value.translation.height > 50 {
+                    if value.translation.height < -50 {
                         onDismiss()
                     } else {
                         withAnimation(.spring(duration: 0.3)) {
@@ -133,7 +133,7 @@ public struct EduToast: View {
                     }
                 }
         )
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .transition(.move(edge: .top).combined(with: .opacity))
         // MARK: - Accessibility
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(item.style.accessibilityPrefix): \(item.message)")

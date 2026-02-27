@@ -34,7 +34,8 @@ public struct BaseCrudContract: ScreenContract {
             return "\(apiPrefix)\(basePath)"
         case .search:
             let query = context.searchQuery ?? ""
-            return "\(apiPrefix)\(basePath)?search=\(query)"
+            let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            return "\(apiPrefix)\(basePath)?search=\(encoded)"
         case .saveNew:
             return "\(apiPrefix)\(basePath)"
         case .saveExisting:

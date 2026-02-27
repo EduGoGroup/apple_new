@@ -16,12 +16,21 @@ final class DynamicScreenViewModel {
     var alertMessage: String?
     var onLogout: (() -> Void)?
     var onNavigate: ((String, [String: String]) -> Void)?
+    var onSubmit: ((String, String, [String: JSONValue]) async -> Void)?
     private var currentOffset: Int = 0
 
     // MARK: - Form State
 
     var fieldValues: [String: String] = [:]
     var fieldErrors: [String: String] = [:]
+    var searchQuery: String?
+
+    var isEditing: Bool {
+        if case .success(let items, _, _) = dataState, !items.isEmpty {
+            return true
+        }
+        return false
+    }
 
     // MARK: - User Context
 
@@ -114,7 +123,7 @@ final class DynamicScreenViewModel {
             userContext: userContext,
             selectedItem: selectedItem,
             fieldValues: fieldValues,
-            searchQuery: nil,
+            searchQuery: searchQuery,
             paginationOffset: currentOffset
         )
 
@@ -155,7 +164,7 @@ final class DynamicScreenViewModel {
         case .custom:
             Task { await executeCustomEvent(action.id) }
         case .submitForm:
-            Task { await executeEvent(.saveNew) }
+            Task { await executeEvent(isEditing ? .saveExisting : .saveNew) }
         default:
             alertMessage = "Hola Mundo - \(action.id)"
         }
@@ -210,9 +219,12 @@ final class DynamicScreenViewModel {
             alertMessage = "Permission denied"
         case .logout:
             onLogout?()
-        case .submitTo(let endpoint, let method, let fieldValues):
-            alertMessage = "Submit to \(method) \(endpoint)"
-            _ = fieldValues // Will be used by actual submission logic
+        case .submitTo(let endpoint, let method, let body):
+            if let onSubmit {
+                Task { await onSubmit(endpoint, method, body) }
+            } else {
+                alertMessage = "Submit: \(method) \(endpoint)"
+            }
         case .cancelled, .noOp:
             break
         }

@@ -235,6 +235,7 @@ struct EventOrchestratorTests {
     func createNavigatesToForm() async {
         let registry = ContractRegistry()
         registry.register(SchoolsListContract())
+        registry.register(SchoolCrudContract())
         let client = MockNetworkClient()
         let loader = DataLoader(
             networkClient: client,

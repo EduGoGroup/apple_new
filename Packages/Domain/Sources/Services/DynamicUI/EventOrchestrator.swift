@@ -65,7 +65,13 @@ public actor EventOrchestrator {
 
         case .create:
             let formKey = "\(contract.screenKey.replacingOccurrences(of: "-list", with: ""))-crud"
-            return .navigateTo(screenKey: formKey)
+            let hasForm = await MainActor.run { registry.contract(for: formKey) != nil }
+            if hasForm {
+                return .navigateTo(screenKey: formKey)
+            }
+            // Intentar con -form (formato backend)
+            let altKey = "\(contract.screenKey.replacingOccurrences(of: "-list", with: ""))-form"
+            return .navigateTo(screenKey: altKey)
         }
     }
 
