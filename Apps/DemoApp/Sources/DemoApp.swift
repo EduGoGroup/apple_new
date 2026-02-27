@@ -52,19 +52,14 @@ struct DemoApp: App {
                     )
 
                 case .main:
-                    MainScreen(
-                        screenLoader: container.screenLoader,
-                        dataLoader: container.dataLoader,
-                        networkClient: container.authenticatedNetworkClient,
-                        onLogout: {
-                            Task {
-                                await container.authService.logout()
-                                await container.syncService.clear()
-                                await container.screenLoader.clearCache()
+                    MainScreen(container: container)
+                        .task {
+                            for await event in await container.authService.sessionStream {
+                                if event == .loggedOut || event == .expired {
+                                    currentRoute = .login
+                                }
                             }
-                            currentRoute = .login
                         }
-                    )
                 }
             }
             .animation(.easeInOut, value: currentRoute)

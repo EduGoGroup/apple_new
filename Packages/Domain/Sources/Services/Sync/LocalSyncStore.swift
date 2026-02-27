@@ -106,6 +106,8 @@ public actor LocalSyncStore {
                 screens: bundle.screens,
                 availableContexts: bundle.availableContexts,
                 hashes: updatedHashes,
+                glossary: bundle.glossary,
+                strings: bundle.strings,
                 syncedAt: Date()
             )
 
@@ -117,6 +119,8 @@ public actor LocalSyncStore {
                 screens: bundle.screens,
                 availableContexts: bundle.availableContexts,
                 hashes: updatedHashes,
+                glossary: bundle.glossary,
+                strings: bundle.strings,
                 syncedAt: Date()
             )
 
@@ -128,6 +132,8 @@ public actor LocalSyncStore {
                 screens: screens ?? bundle.screens,
                 availableContexts: bundle.availableContexts,
                 hashes: updatedHashes,
+                glossary: bundle.glossary,
+                strings: bundle.strings,
                 syncedAt: Date()
             )
 
@@ -139,6 +145,34 @@ public actor LocalSyncStore {
                 screens: bundle.screens,
                 availableContexts: contexts ?? bundle.availableContexts,
                 hashes: updatedHashes,
+                glossary: bundle.glossary,
+                strings: bundle.strings,
+                syncedAt: Date()
+            )
+
+        case "glossary":
+            let glossary = Self.decodeStringDictFromJSON(data)
+            updatedBundle = UserDataBundle(
+                menu: bundle.menu,
+                permissions: bundle.permissions,
+                screens: bundle.screens,
+                availableContexts: bundle.availableContexts,
+                hashes: updatedHashes,
+                glossary: glossary ?? bundle.glossary,
+                strings: bundle.strings,
+                syncedAt: Date()
+            )
+
+        case "strings":
+            let strings = Self.decodeStringDictFromJSON(data)
+            updatedBundle = UserDataBundle(
+                menu: bundle.menu,
+                permissions: bundle.permissions,
+                screens: bundle.screens,
+                availableContexts: bundle.availableContexts,
+                hashes: updatedHashes,
+                glossary: bundle.glossary,
+                strings: strings ?? bundle.strings,
                 syncedAt: Date()
             )
 
@@ -150,6 +184,8 @@ public actor LocalSyncStore {
                 screens: bundle.screens,
                 availableContexts: bundle.availableContexts,
                 hashes: updatedHashes,
+                glossary: bundle.glossary,
+                strings: bundle.strings,
                 syncedAt: Date()
             )
         }
@@ -183,6 +219,17 @@ public actor LocalSyncStore {
     private static func decodeContextsFromJSON(_ json: JSONValue) -> [UserContextDTO]? {
         guard let arrayData = encodeJSONValue(json) else { return nil }
         return try? JSONDecoder().decode([UserContextDTO].self, from: arrayData)
+    }
+
+    private static func decodeStringDictFromJSON(_ json: JSONValue) -> [String: String]? {
+        guard case .object(let dict) = json else { return nil }
+        var result: [String: String] = [:]
+        for (key, value) in dict {
+            if case .string(let str) = value {
+                result[key] = str
+            }
+        }
+        return result
     }
 
     private static func encodeJSONValue(_ value: JSONValue) -> Data? {

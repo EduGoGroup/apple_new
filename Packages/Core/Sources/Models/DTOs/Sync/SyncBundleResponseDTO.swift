@@ -36,12 +36,20 @@ public struct SyncBundleResponseDTO: Codable, Sendable {
     /// Map of bucket names to their current hash values for delta sync.
     public let hashes: [String: String]
 
+    /// Dynamic glossary terms (term_key → localized term value).
+    public let glossary: [String: String]?
+
+    /// Server-driven translated strings (string_key → translated value).
+    public let strings: [String: String]?
+
     enum CodingKeys: String, CodingKey {
         case menu
         case permissions
         case screens
         case availableContexts = "available_contexts"
         case hashes
+        case glossary
+        case strings
     }
 
     public init(
@@ -49,12 +57,16 @@ public struct SyncBundleResponseDTO: Codable, Sendable {
         permissions: [String],
         screens: [String: ScreenBundleDTO],
         availableContexts: [UserContextDTO],
-        hashes: [String: String]
+        hashes: [String: String],
+        glossary: [String: String]? = nil,
+        strings: [String: String]? = nil
     ) {
         self.menu = menu
         self.permissions = permissions
         self.screens = screens
         self.availableContexts = availableContexts
         self.hashes = hashes
+        self.glossary = glossary
+        self.strings = strings
     }
 }

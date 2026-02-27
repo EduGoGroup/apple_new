@@ -33,10 +33,12 @@ public struct ContextPlaceholderInfo: Sendable {
 public struct PlaceholderResolver: Sendable {
     public let userInfo: UserPlaceholderInfo
     public let contextInfo: ContextPlaceholderInfo
+    public let glossaryData: [String: String]
 
-    public init(userInfo: UserPlaceholderInfo, contextInfo: ContextPlaceholderInfo) {
+    public init(userInfo: UserPlaceholderInfo, contextInfo: ContextPlaceholderInfo, glossaryData: [String: String] = [:]) {
         self.userInfo = userInfo
         self.contextInfo = contextInfo
+        self.glossaryData = glossaryData
     }
 
     /// Reemplaza placeholders en un string.
@@ -53,6 +55,11 @@ public struct PlaceholderResolver: Sendable {
         result = result.replacingOccurrences(of: "{context.roleName}", with: contextInfo.roleName)
         result = result.replacingOccurrences(of: "{context.schoolName}", with: contextInfo.schoolName ?? "")
         result = result.replacingOccurrences(of: "{context.academicUnitName}", with: contextInfo.academicUnitName ?? "")
+
+        // Glossary placeholders {glossary.*}
+        for (key, value) in glossaryData {
+            result = result.replacingOccurrences(of: "{glossary.\(key)}", with: value)
+        }
 
         // Date placeholders
         let formatter = DateFormatter()

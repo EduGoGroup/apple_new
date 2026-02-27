@@ -100,7 +100,7 @@ public actor SyncService {
         transition(to: .syncing)
 
         do {
-            let url = "\(apiConfig.mobileBaseURL)/api/v1/sync/bundle"
+            let url = "\(apiConfig.iamBaseURL)/api/v1/sync/bundle"
             let response: SyncBundleResponseDTO = try await networkClient.get(url)
 
             let bundle = UserDataBundle(
@@ -109,6 +109,8 @@ public actor SyncService {
                 screens: response.screens,
                 availableContexts: response.availableContexts,
                 hashes: response.hashes,
+                glossary: response.glossary ?? [:],
+                strings: response.strings ?? [:],
                 syncedAt: Date()
             )
 
@@ -141,7 +143,7 @@ public actor SyncService {
         transition(to: .syncing)
 
         do {
-            let url = "\(apiConfig.mobileBaseURL)/api/v1/sync/delta"
+            let url = "\(apiConfig.iamBaseURL)/api/v1/sync/delta"
             let requestBody = DeltaSyncRequestDTO(hashes: currentHashes)
             let response: DeltaSyncResponseDTO = try await networkClient.post(url, body: requestBody)
 
