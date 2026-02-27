@@ -23,6 +23,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 #endif
 
+func debugLog(_ message: String) {
+    let msg = "[\(Date())] \(message)\n"
+    print(msg, terminator: "")
+    if let data = msg.data(using: .utf8) {
+        let url = URL(fileURLWithPath: "/tmp/demoapp_debug.log")
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(data)
+            handle.closeFile()
+        } else {
+            try? data.write(to: url)
+        }
+    }
+}
+
 @main
 struct DemoApp: App {
     #if canImport(AppKit)
@@ -42,19 +57,37 @@ struct DemoApp: App {
                         syncService: container.syncService,
                         screenLoader: container.screenLoader
                     ) { isAuthenticated in
+                        debugLog("DEBUG [Splash] finished — isAuthenticated: \(isAuthenticated)")
                         currentRoute = isAuthenticated ? .main : .login
                     }
 
                 case .login:
                     LoginScreen(
                         authService: container.authService,
-                        onLoginSuccess: { currentRoute = .main }
+                        onLoginSuccess: {
+                            debugLog("DEBUG [Login] success — starting fullSync...")
+                            Task {
+                                do {
+                                    let bundle = try await container.syncService.fullSync()
+                                    debugLog("DEBUG [Sync] Bundle loaded — menu: \(bundle.menu.count) items, screens: \(bundle.screens.count), permissions: \(bundle.permissions.count), contexts: \(bundle.availableContexts.count)")
+                                    for item in bundle.menu {
+                                        debugLog("DEBUG [Menu] item: key=\(item.key), name=\(item.displayName), children=\(item.children?.count ?? 0), perms=\(item.permissions)")
+                                    }
+                                    await container.screenLoader.seedFromBundle(screens: bundle.screens)
+                                } catch {
+                                    debugLog("DEBUG [Sync] fullSync FAILED: \(error)")
+                                }
+                                debugLog("DEBUG [Login] navigating to .main")
+                                currentRoute = .main
+                            }
+                        }
                     )
 
                 case .main:
                     MainScreen(container: container)
                         .task {
                             for await event in await container.authService.sessionStream {
+                                debugLog("DEBUG [Session] event: \(event)")
                                 if event == .loggedOut || event == .expired {
                                     currentRoute = .login
                                 }

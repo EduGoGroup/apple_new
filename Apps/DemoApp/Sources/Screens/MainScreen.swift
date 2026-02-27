@@ -74,19 +74,39 @@ struct MainScreen: View {
     // MARK: - Data Loading
 
     private func loadInitialData() async {
+        debugLog("DEBUG [MainScreen] loadInitialData started")
+
         // Cargar info del usuario
         if let context = await container.authService.activeContext {
             userName = await container.authService.authenticatedUser?.fullName ?? ""
             roleName = context.roleName
             schoolName = context.schoolName
             currentSchoolId = context.schoolId
+            debugLog("DEBUG [MainScreen] user: \(userName), role: \(roleName), school: \(schoolName ?? "none")")
+        } else {
+            debugLog("DEBUG [MainScreen] NO activeContext found!")
         }
 
         // Cargar bundle y construir menu
         if let bundle = await container.syncService.currentBundle {
+            debugLog("DEBUG [MainScreen] bundle found — menu DTOs: \(bundle.menu.count), permissions: \(bundle.permissions.count)")
             let permissions = await container.authService.activeContext?.permissions ?? []
+            debugLog("DEBUG [MainScreen] user permissions count: \(permissions.count)")
             await container.menuService.updateMenu(from: bundle, permissions: permissions)
             availableContexts = bundle.availableContexts
+
+            // Also set menuItems directly to avoid race with stream listener
+            let filtered = await container.menuService.currentMenu
+            debugLog("DEBUG [MainScreen] filtered menu items: \(filtered.count)")
+            for item in filtered {
+                debugLog("DEBUG [MainScreen] menuItem: key=\(item.key), name=\(item.displayName), children=\(item.children.count)")
+            }
+            menuItems = filtered
+            if selectedItemKey == nil, let first = filtered.first {
+                selectedItemKey = first.key
+            }
+        } else {
+            debugLog("DEBUG [MainScreen] NO bundle found! syncService.currentBundle is nil")
         }
     }
 

@@ -39,7 +39,7 @@ public struct MenuItemDTO: Codable, Sendable, Hashable, Identifiable {
     /// Sort order for display within its level.
     public let sortOrder: Int
 
-    /// Permissions required to see this menu item.
+    /// Permissions required to see this menu item (empty if accessible to all).
     public let permissions: [String]
 
     /// Map of screen slot names to screen keys.
@@ -68,8 +68,8 @@ public struct MenuItemDTO: Codable, Sendable, Hashable, Identifiable {
         icon: String? = nil,
         scope: String,
         sortOrder: Int,
-        permissions: [String],
-        screens: [String: String],
+        permissions: [String] = [],
+        screens: [String: String] = [:],
         children: [MenuItemDTO]? = nil
     ) {
         self.key = key
@@ -80,5 +80,17 @@ public struct MenuItemDTO: Codable, Sendable, Hashable, Identifiable {
         self.permissions = permissions
         self.screens = screens
         self.children = children
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        key = try container.decode(String.self, forKey: .key)
+        displayName = try container.decode(String.self, forKey: .displayName)
+        icon = try container.decodeIfPresent(String.self, forKey: .icon)
+        scope = try container.decodeIfPresent(String.self, forKey: .scope) ?? ""
+        sortOrder = try container.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
+        permissions = try container.decodeIfPresent([String].self, forKey: .permissions) ?? []
+        screens = try container.decodeIfPresent([String: String].self, forKey: .screens) ?? [:]
+        children = try container.decodeIfPresent([MenuItemDTO].self, forKey: .children)
     }
 }
