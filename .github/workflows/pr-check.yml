@@ -1,0 +1,59 @@
+name: PR Check
+
+on:
+  pull_request:
+    branches: [main, dev]
+
+# Cancel previous runs for the same PR
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  # Adjust if the runner has a different Xcode 26 path
+  XCODE_PATH: /Applications/Xcode_26.app/Contents/Developer
+
+jobs:
+  build:
+    name: Build
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          if [ -d "$XCODE_PATH" ]; then
+            sudo xcode-select -s "$XCODE_PATH"
+          else
+            echo "Available Xcode versions:"
+            ls /Applications/ | grep Xcode
+            echo "::warning::Xcode 26 not found, using default"
+          fi
+          swift --version
+
+      - name: Build
+        run: make build
+
+  test:
+    name: Test ${{ matrix.package }}
+    runs-on: macos-15
+    needs: build
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [Core, Infrastructure, Domain, DynamicUI]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          if [ -d "$XCODE_PATH" ]; then
+            sudo xcode-select -s "$XCODE_PATH"
+          else
+            echo "::warning::Xcode 26 not found, using default"
+          fi
+
+      - name: Test ${{ matrix.package }}
+        run: cd Packages/${{ matrix.package }} && swift test
