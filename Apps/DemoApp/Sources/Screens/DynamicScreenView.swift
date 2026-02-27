@@ -45,7 +45,10 @@ struct DynamicScreenView: View {
                 }
 
             case .ready(let screen):
-                screenContent(screen: screen)
+                PatternRouter(
+                    screen: screen,
+                    viewModel: viewModel
+                )
             }
         }
         .onAppear { viewModel.onLogout = onLogout }
@@ -55,33 +58,5 @@ struct DynamicScreenView: View {
         } message: {
             Text(viewModel.alertMessage ?? "")
         }
-    }
-
-    @ViewBuilder
-    private func screenContent(screen: ScreenDefinition) -> some View {
-        let items: [[String: EduModels.JSONValue]] = {
-            if case .success(let items, _, _) = viewModel.dataState {
-                return items
-            }
-            return []
-        }()
-
-        let data: [String: EduModels.JSONValue]? = screen.slotData?.mapValues { $0 }
-
-        PatternRouter(
-            screen: screen,
-            data: data,
-            items: items,
-            onAction: { action in viewModel.executeAction(action) }
-        )
-        .overlay {
-            if case .loading = viewModel.dataState {
-                ProgressView()
-            }
-        }
-        .refreshable { await viewModel.refresh() }
-        .navigationTitle(
-            screen.template.navigation?.topBar?.title ?? screen.screenName
-        )
     }
 }

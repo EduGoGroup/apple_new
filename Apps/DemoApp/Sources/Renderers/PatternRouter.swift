@@ -5,26 +5,70 @@ import EduModels
 
 struct PatternRouter: View {
     let screen: ScreenDefinition
-    let data: [String: EduModels.JSONValue]?
-    let items: [[String: EduModels.JSONValue]]
-    let onAction: (ActionDefinition) -> Void
+    let viewModel: DynamicScreenViewModel
 
     var body: some View {
         switch screen.pattern {
-        case .dashboard:
-            DashboardPatternRenderer(
-                screen: screen,
-                data: data,
-                onAction: onAction
-            )
+        case .login:
+            FallbackRenderer(patternName: "login")
+
         case .list:
             ListPatternRenderer(
                 screen: screen,
-                items: items,
-                onAction: onAction
+                viewModel: viewModel
             )
-        default:
-            FallbackRenderer(patternName: screen.pattern.rawValue)
+
+        case .form:
+            FormPatternRenderer(
+                screen: screen,
+                viewModel: viewModel
+            )
+
+        case .detail:
+            DetailPatternRenderer(
+                screen: screen,
+                viewModel: viewModel
+            )
+
+        case .dashboard:
+            DashboardPatternRenderer(
+                screen: screen,
+                viewModel: viewModel
+            )
+
+        case .settings:
+            SettingsPatternRenderer(
+                screen: screen,
+                viewModel: viewModel
+            )
+
+        case .search:
+            ListPatternRenderer(
+                screen: screen,
+                viewModel: viewModel
+            )
+
+        case .profile:
+            DetailPatternRenderer(
+                screen: screen,
+                viewModel: viewModel
+            )
+
+        case .modal:
+            FallbackRenderer(patternName: "modal")
+
+        case .notification:
+            FallbackRenderer(patternName: "notification")
+
+        case .onboarding:
+            FallbackRenderer(patternName: "onboarding")
+
+        case .emptyState:
+            EduEmptyStateView(
+                icon: "tray",
+                title: screen.slotData?["title"]?.stringRepresentation ?? "Sin contenido",
+                description: screen.slotData?["description"]?.stringRepresentation ?? ""
+            )
         }
     }
 }

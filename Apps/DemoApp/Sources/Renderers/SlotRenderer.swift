@@ -8,7 +8,9 @@ struct SlotRenderer: View {
     let data: [String: EduModels.JSONValue]?
     let slotData: [String: EduModels.JSONValue]?
     let actions: [ActionDefinition]
+    var fieldValues: Binding<[String: String]>?
     let onAction: (ActionDefinition) -> Void
+    var onEvent: ((String) -> Void)? = nil
 
     private let resolver = SlotBindingResolver()
 
@@ -17,128 +19,116 @@ struct SlotRenderer: View {
     }
 
     var body: some View {
-        switch slot.controlType {
-        case .label:
-            labelView
-
-        case .filledButton:
-            EduButton(slot.label ?? "Button", icon: slot.icon.map { Self.sfSymbolName(for: $0) }, style: .primary) {
-                triggerAction()
-            }
-
-        case .outlinedButton:
-            EduButton(slot.label ?? "Button", icon: slot.icon.map { Self.sfSymbolName(for: $0) }, style: .secondary) {
-                triggerAction()
-            }
-
-        case .textButton:
-            EduButton.link(slot.label ?? "Button") {
-                triggerAction()
-            }
-
-        case .iconButton:
-            Button {
-                triggerAction()
-            } label: {
-                Image(systemName: Self.sfSymbolName(for: slot.icon ?? "questionmark"))
-            }
-
-        case .metricCard:
-            EduMetricCard(
-                title: slot.label ?? "",
-                value: resolvedValue?.stringRepresentation ?? "0",
-                icon: Self.sfSymbolName(for: slot.icon ?? "chart.bar.fill")
-            )
-
-        case .icon:
-            Image(systemName: slot.icon ?? "questionmark")
-
-        case .divider:
-            Divider()
-
-        case .listItem:
-            listItemView
-
-        case .listItemNavigation:
-            listItemNavigationView
-
-        default:
-            EmptyView()
-        }
-    }
-
-    // MARK: - Subviews
-
-    @ViewBuilder
-    private var labelView: some View {
-        let text = resolvedValue?.stringRepresentation ?? slot.label ?? ""
-        switch slot.style {
-        case "headline-large":
-            Text(text).font(.largeTitle).fontWeight(.bold)
-        case "title":
-            Text(text).font(.title)
-        case "title-medium":
-            Text(text).font(.title2)
-        case "title-small":
-            Text(text).font(.title3)
-        case "headline":
-            Text(text).font(.headline)
-        case "body":
-            Text(text).font(.body)
-        case "caption":
-            Text(text).font(.caption).foregroundStyle(.secondary)
-        case "subheadline":
-            Text(text).font(.subheadline).foregroundStyle(.secondary)
-        default:
-            Text(text)
-        }
-    }
-
-    private var listItemView: some View {
-        HStack {
-            if let icon = slot.icon {
-                Image(systemName: Self.sfSymbolName(for: icon))
-            }
-            VStack(alignment: .leading) {
-                Text(resolvedValue?.stringRepresentation ?? "")
-                if let label = slot.label {
-                    Text(label)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        Group {
+            switch slot.controlType {
+            // MARK: - Input Controls
+            case .textInput, .emailInput, .numberInput, .searchBar:
+                if let fieldValues {
+                    TextInputControl(
+                        slot: slot,
+                        fieldValues: fieldValues,
+                        controlType: slot.controlType
+                    )
+                } else {
+                    Text(resolvedValue?.stringRepresentation ?? "")
                 }
-            }
-            Spacer()
-        }
-    }
 
-    private var listItemNavigationView: some View {
-        HStack {
-            if let icon = slot.icon {
-                Image(systemName: Self.sfSymbolName(for: icon))
-            }
-            VStack(alignment: .leading) {
-                Text(resolvedValue?.stringRepresentation ?? "")
-                if let label = slot.label {
-                    Text(label)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            case .passwordInput:
+                if let fieldValues {
+                    PasswordInputControl(slot: slot, fieldValues: fieldValues)
+                } else {
+                    Text("••••••••")
                 }
+
+            // MARK: - Selection Controls
+            case .select:
+                if let fieldValues {
+                    SelectControl(slot: slot, fieldValues: fieldValues)
+                } else {
+                    Text(resolvedValue?.stringRepresentation ?? "")
+                }
+
+            case .checkbox:
+                if let fieldValues {
+                    CheckboxControl(slot: slot, fieldValues: fieldValues)
+                } else {
+                    Label(
+                        slot.label ?? "",
+                        systemImage: resolvedValue?.boolValue == true ? "checkmark.square.fill" : "square"
+                    )
+                }
+
+            case .switch:
+                if let fieldValues {
+                    SwitchToggleControl(slot: slot, fieldValues: fieldValues)
+                } else {
+                    Label(
+                        slot.label ?? "",
+                        systemImage: resolvedValue?.boolValue == true ? "checkmark.circle.fill" : "circle"
+                    )
+                }
+
+            case .radioGroup:
+                if let fieldValues {
+                    RadioGroupControl(slot: slot, fieldValues: fieldValues)
+                } else {
+                    Text(resolvedValue?.stringRepresentation ?? "")
+                }
+
+            case .chip:
+                if let fieldValues {
+                    ChipControl(slot: slot, fieldValues: fieldValues)
+                } else {
+                    ChipDisplayControl(slot: slot, resolvedValue: resolvedValue)
+                }
+
+            case .rating:
+                if let fieldValues {
+                    RatingControl(slot: slot, fieldValues: fieldValues)
+                } else {
+                    RatingDisplayControl(slot: slot, resolvedValue: resolvedValue)
+                }
+
+            // MARK: - Buttons
+            case .filledButton, .outlinedButton, .textButton, .iconButton:
+                ButtonControl(
+                    slot: slot,
+                    actions: actions,
+                    onAction: onAction,
+                    onEvent: onEvent
+                )
+
+            // MARK: - Display Controls
+            case .label:
+                LabelControl(slot: slot, resolvedValue: resolvedValue)
+
+            case .icon:
+                IconControl(slot: slot)
+
+            case .avatar:
+                AvatarControl(slot: slot, resolvedValue: resolvedValue)
+
+            case .image:
+                ImageControl(slot: slot, resolvedValue: resolvedValue)
+
+            case .divider:
+                Divider()
+
+            // MARK: - Compound Controls
+            case .listItem:
+                ListItemControl(slot: slot, resolvedValue: resolvedValue)
+
+            case .listItemNavigation:
+                ListItemNavigationControl(
+                    slot: slot,
+                    resolvedValue: resolvedValue,
+                    actions: actions,
+                    onAction: onAction
+                )
+
+            case .metricCard:
+                MetricCardControl(slot: slot, resolvedValue: resolvedValue)
             }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .foregroundStyle(.secondary)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            triggerAction()
-        }
-    }
-
-    // MARK: - Actions
-
-    private func triggerAction() {
-        if let action = actions.first(where: { $0.triggerSlotId == slot.id }) {
-            onAction(action)
         }
     }
 
@@ -185,6 +175,16 @@ struct SlotRenderer: View {
         "download": "arrow.down.doc.fill",
         "filter_list": "line.3.horizontal.decrease",
         "sort": "arrow.up.arrow.down",
+        "logout": "rectangle.portrait.and.arrow.right",
+        "language": "globe",
+        "dark_mode": "moon.fill",
+        "light_mode": "sun.max.fill",
+        "phone": "phone.fill",
+        "location": "location.fill",
+        "link": "link",
+        "attach_file": "paperclip",
+        "more_vert": "ellipsis",
+        "more_horiz": "ellipsis",
     ]
 
     static func sfSymbolName(for icon: String) -> String {
