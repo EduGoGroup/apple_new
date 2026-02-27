@@ -1,4 +1,6 @@
-import XCTest
+import Testing
+import Foundation
+import Synchronization
 @testable import FormsSDK
 
 // MARK: - Test Helpers
@@ -8,398 +10,398 @@ actor FlagBox {
     func set() { value = true }
 }
 
-final class CounterBox: @unchecked Sendable {
-    private(set) var count = 0
-    func increment() { count += 1 }
+final class CounterBox: Sendable {
+    private let storage = Mutex(0)
+    var count: Int { storage.withLock { $0 } }
+    func increment() { storage.withLock { $0 += 1 } }
 }
 
 // MARK: - ValidationResult Tests
 
-final class ValidationResultTests: XCTestCase {
+@Suite struct ValidationResultTests {
 
-    func testValidResult() {
+    @Test func testValidResult() {
         let result = ValidationResult.valid()
-        XCTAssertTrue(result.isValid)
-        XCTAssertNil(result.errorMessage)
+        #expect(result.isValid)
+        #expect(result.errorMessage == nil)
     }
 
-    func testInvalidResult() {
+    @Test func testInvalidResult() {
         let result = ValidationResult.invalid("Error message")
-        XCTAssertFalse(result.isValid)
-        XCTAssertEqual(result.errorMessage, "Error message")
+        #expect(!result.isValid)
+        #expect(result.errorMessage == "Error message")
     }
 
-    func testEquatable() {
+    @Test func testEquatable() {
         let a = ValidationResult.valid()
         let b = ValidationResult.valid()
-        XCTAssertEqual(a, b)
+        #expect(a == b)
 
         let c = ValidationResult.invalid("err")
         let d = ValidationResult.invalid("err")
-        XCTAssertEqual(c, d)
+        #expect(c == d)
 
-        XCTAssertNotEqual(a, c)
+        #expect(a != c)
     }
 }
 
 // MARK: - Validators Tests
 
-final class ValidatorsEmailTests: XCTestCase {
+@Suite struct ValidatorsEmailTests {
 
-    func testValidEmail() {
+    @Test func testValidEmail() {
         let validator = Validators.email()
         let result = validator("test@example.com")
-        XCTAssertTrue(result.isValid)
+        #expect(result.isValid)
     }
 
-    func testInvalidEmail() {
+    @Test func testInvalidEmail() {
         let validator = Validators.email()
         let result = validator("not-an-email")
-        XCTAssertFalse(result.isValid)
+        #expect(!result.isValid)
     }
 
-    func testEmptyEmail() {
+    @Test func testEmptyEmail() {
         let validator = Validators.email()
         let result = validator("")
-        XCTAssertFalse(result.isValid)
+        #expect(!result.isValid)
     }
 }
 
-final class ValidatorsPasswordTests: XCTestCase {
+@Suite struct ValidatorsPasswordTests {
 
-    func testValidPassword() {
+    @Test func testValidPassword() {
         let validator = Validators.password(minLength: 8)
         let result = validator("password123")
-        XCTAssertTrue(result.isValid)
+        #expect(result.isValid)
     }
 
-    func testShortPassword() {
+    @Test func testShortPassword() {
         let validator = Validators.password(minLength: 8)
         let result = validator("short")
-        XCTAssertFalse(result.isValid)
+        #expect(!result.isValid)
     }
 
-    func testEmptyPassword() {
+    @Test func testEmptyPassword() {
         let validator = Validators.password()
         let result = validator("")
-        XCTAssertFalse(result.isValid)
+        #expect(!result.isValid)
     }
 
-    func testPasswordRequiresUppercase() {
+    @Test func testPasswordRequiresUppercase() {
         let validator = Validators.password(minLength: 8, requireUppercase: true)
-        XCTAssertFalse(validator("lowercase1").isValid)
-        XCTAssertTrue(validator("Uppercase1").isValid)
+        #expect(!validator("lowercase1").isValid)
+        #expect(validator("Uppercase1").isValid)
     }
 
-    func testPasswordRequiresNumbers() {
+    @Test func testPasswordRequiresNumbers() {
         let validator = Validators.password(minLength: 8, requireNumbers: true)
-        XCTAssertFalse(validator("NoNumbers!").isValid)
-        XCTAssertTrue(validator("HasNumber1").isValid)
+        #expect(!validator("NoNumbers!").isValid)
+        #expect(validator("HasNumber1").isValid)
     }
 
-    func testPasswordRequiresSymbols() {
+    @Test func testPasswordRequiresSymbols() {
         let validator = Validators.password(minLength: 8, requireSymbols: true)
-        XCTAssertFalse(validator("NoSymbols1").isValid)
-        XCTAssertTrue(validator("Symbol1!!").isValid)
+        #expect(!validator("NoSymbols1").isValid)
+        #expect(validator("Symbol1!!").isValid)
     }
 }
 
-final class ValidatorsStringTests: XCTestCase {
+@Suite struct ValidatorsStringTests {
 
-    func testNonEmpty() {
+    @Test func testNonEmpty() {
         let validator = Validators.nonEmpty(fieldName: "Name")
-        XCTAssertTrue(validator("hello").isValid)
-        XCTAssertFalse(validator("").isValid)
-        XCTAssertFalse(validator("   ").isValid)
+        #expect(validator("hello").isValid)
+        #expect(!validator("").isValid)
+        #expect(!validator("   ").isValid)
     }
 
-    func testMinLength() {
+    @Test func testMinLength() {
         let validator = Validators.minLength(5)
-        XCTAssertTrue(validator("12345").isValid)
-        XCTAssertFalse(validator("1234").isValid)
+        #expect(validator("12345").isValid)
+        #expect(!validator("1234").isValid)
     }
 
-    func testMaxLength() {
+    @Test func testMaxLength() {
         let validator = Validators.maxLength(5)
-        XCTAssertTrue(validator("12345").isValid)
-        XCTAssertFalse(validator("123456").isValid)
+        #expect(validator("12345").isValid)
+        #expect(!validator("123456").isValid)
     }
 
-    func testPattern() {
+    @Test func testPattern() {
         let validator = Validators.pattern("^[0-9]+$", errorMessage: "Only digits")
-        XCTAssertTrue(validator("12345").isValid)
-        XCTAssertFalse(validator("abc").isValid)
+        #expect(validator("12345").isValid)
+        #expect(!validator("abc").isValid)
     }
 }
 
-final class ValidatorsNumericTests: XCTestCase {
+@Suite struct ValidatorsNumericTests {
 
-    func testRange() {
+    @Test func testRange() {
         let validator = Validators.range(1...10, fieldName: "Age")
-        XCTAssertTrue(validator(5).isValid)
-        XCTAssertFalse(validator(0).isValid)
-        XCTAssertFalse(validator(11).isValid)
+        #expect(validator(5).isValid)
+        #expect(!validator(0).isValid)
+        #expect(!validator(11).isValid)
     }
 
-    func testMin() {
+    @Test func testMin() {
         let validator = Validators.min(0, fieldName: "Score")
-        XCTAssertTrue(validator(0).isValid)
-        XCTAssertTrue(validator(100).isValid)
-        XCTAssertFalse(validator(-1).isValid)
+        #expect(validator(0).isValid)
+        #expect(validator(100).isValid)
+        #expect(!validator(-1).isValid)
     }
 
-    func testMax() {
+    @Test func testMax() {
         let validator = Validators.max(100, fieldName: "Score")
-        XCTAssertTrue(validator(100).isValid)
-        XCTAssertFalse(validator(101).isValid)
+        #expect(validator(100).isValid)
+        #expect(!validator(101).isValid)
     }
 }
 
-final class ValidatorsCompositionTests: XCTestCase {
+@Suite struct ValidatorsCompositionTests {
 
-    func testAllPassesWhenAllValid() {
+    @Test func testAllPassesWhenAllValid() {
         let validator = Validators.all([
             Validators.nonEmpty(),
             Validators.minLength(3)
         ])
-        XCTAssertTrue(validator("hello").isValid)
+        #expect(validator("hello").isValid)
     }
 
-    func testAllFailsOnFirstInvalid() {
+    @Test func testAllFailsOnFirstInvalid() {
         let validator = Validators.all([
             Validators.nonEmpty(),
             Validators.minLength(10)
         ])
         let result = validator("hi")
-        XCTAssertFalse(result.isValid)
+        #expect(!result.isValid)
     }
 
-    func testWhenConditionTrue() {
+    @Test func testWhenConditionTrue() {
         let validator = Validators.when(
             { (s: String) in !s.isEmpty },
             then: Validators.minLength(5)
         )
-        XCTAssertFalse(validator("hi").isValid)
-        XCTAssertTrue(validator("hello").isValid)
+        #expect(!validator("hi").isValid)
+        #expect(validator("hello").isValid)
     }
 
-    func testWhenConditionFalse() {
+    @Test func testWhenConditionFalse() {
         let validator = Validators.when(
             { (s: String) in !s.isEmpty },
             then: Validators.minLength(5)
         )
-        XCTAssertTrue(validator("").isValid)
+        #expect(validator("").isValid)
     }
 }
 
 // MARK: - CrossValidators Tests
 
-final class CrossValidatorsTests: XCTestCase {
+@Suite struct CrossValidatorsTests {
 
-    func testPasswordMatch() {
-        XCTAssertTrue(CrossValidators.passwordMatch("abc", "abc").isValid)
-        XCTAssertFalse(CrossValidators.passwordMatch("abc", "def").isValid)
+    @Test func testPasswordMatch() {
+        #expect(CrossValidators.passwordMatch("abc", "abc").isValid)
+        #expect(!CrossValidators.passwordMatch("abc", "def").isValid)
     }
 
-    func testDateRange() {
+    @Test func testDateRange() {
         let now = Date()
         let later = now.addingTimeInterval(3600)
-        XCTAssertTrue(CrossValidators.dateRange(start: now, end: later).isValid)
-        XCTAssertFalse(CrossValidators.dateRange(start: later, end: now).isValid)
-        XCTAssertFalse(CrossValidators.dateRange(start: nil, end: nil).isValid)
+        #expect(CrossValidators.dateRange(start: now, end: later).isValid)
+        #expect(!CrossValidators.dateRange(start: later, end: now).isValid)
+        #expect(!CrossValidators.dateRange(start: nil, end: nil).isValid)
     }
 
-    func testOptionalDateRange() {
+    @Test func testOptionalDateRange() {
         let now = Date()
         let later = now.addingTimeInterval(3600)
-        XCTAssertTrue(CrossValidators.optionalDateRange(start: nil, end: nil).isValid)
-        XCTAssertTrue(CrossValidators.optionalDateRange(start: now, end: later).isValid)
-        XCTAssertFalse(CrossValidators.optionalDateRange(start: now, end: nil).isValid)
-        XCTAssertFalse(CrossValidators.optionalDateRange(start: later, end: now).isValid)
+        #expect(CrossValidators.optionalDateRange(start: nil, end: nil).isValid)
+        #expect(CrossValidators.optionalDateRange(start: now, end: later).isValid)
+        #expect(!CrossValidators.optionalDateRange(start: now, end: nil).isValid)
+        #expect(!CrossValidators.optionalDateRange(start: later, end: now).isValid)
     }
 
-    func testNotInPast() {
+    @Test func testNotInPast() {
         let future = Date().addingTimeInterval(86400 * 2)
-        XCTAssertTrue(CrossValidators.notInPast(future).isValid)
+        #expect(CrossValidators.notInPast(future).isValid)
 
         let past = Date().addingTimeInterval(-86400 * 2)
-        XCTAssertFalse(CrossValidators.notInPast(past).isValid)
+        #expect(!CrossValidators.notInPast(past).isValid)
 
-        XCTAssertFalse(CrossValidators.notInPast(nil).isValid)
+        #expect(!CrossValidators.notInPast(nil).isValid)
     }
 
-    func testAtLeastOneSelectedSet() {
-        XCTAssertTrue(CrossValidators.atLeastOneSelected(Set(["a"])).isValid)
-        XCTAssertFalse(CrossValidators.atLeastOneSelected(Set<String>()).isValid)
+    @Test func testAtLeastOneSelectedSet() {
+        #expect(CrossValidators.atLeastOneSelected(Set(["a"])).isValid)
+        #expect(!CrossValidators.atLeastOneSelected(Set<String>()).isValid)
     }
 
-    func testAtLeastOneSelectedArray() {
-        XCTAssertTrue(CrossValidators.atLeastOneSelected(["a"]).isValid)
-        XCTAssertFalse(CrossValidators.atLeastOneSelected([String]()).isValid)
+    @Test func testAtLeastOneSelectedArray() {
+        #expect(CrossValidators.atLeastOneSelected(["a"]).isValid)
+        #expect(!CrossValidators.atLeastOneSelected([String]()).isValid)
     }
 
-    func testExactCount() {
-        XCTAssertTrue(CrossValidators.exactCount([1, 2, 3], count: 3).isValid)
-        XCTAssertFalse(CrossValidators.exactCount([1, 2], count: 3).isValid)
+    @Test func testExactCount() {
+        #expect(CrossValidators.exactCount([1, 2, 3], count: 3).isValid)
+        #expect(!CrossValidators.exactCount([1, 2], count: 3).isValid)
     }
 
-    func testCountInRange() {
-        XCTAssertTrue(CrossValidators.countInRange([1, 2], range: 1...3).isValid)
-        XCTAssertFalse(CrossValidators.countInRange([Int](), range: 1...3).isValid)
+    @Test func testCountInRange() {
+        #expect(CrossValidators.countInRange([1, 2], range: 1...3).isValid)
+        #expect(!CrossValidators.countInRange([Int](), range: 1...3).isValid)
     }
 
-    func testConditionalRequired() {
-        XCTAssertTrue(CrossValidators.conditionalRequired(condition: true, value: "val", fieldName: "F").isValid)
-        XCTAssertFalse(CrossValidators.conditionalRequired(condition: true, value: "", fieldName: "F").isValid)
-        XCTAssertTrue(CrossValidators.conditionalRequired(condition: false, value: "", fieldName: "F").isValid)
+    @Test func testConditionalRequired() {
+        #expect(CrossValidators.conditionalRequired(condition: true, value: "val", fieldName: "F").isValid)
+        #expect(!CrossValidators.conditionalRequired(condition: true, value: "", fieldName: "F").isValid)
+        #expect(CrossValidators.conditionalRequired(condition: false, value: "", fieldName: "F").isValid)
     }
 
-    func testRequiredWhenPresent() {
-        XCTAssertFalse(CrossValidators.requiredWhenPresent(dependsOn: "val", value: "", fieldName: "F").isValid)
-        XCTAssertTrue(CrossValidators.requiredWhenPresent(dependsOn: "val", value: "ok", fieldName: "F").isValid)
-        XCTAssertTrue(CrossValidators.requiredWhenPresent(dependsOn: "", value: "", fieldName: "F").isValid)
+    @Test func testRequiredWhenPresent() {
+        #expect(!CrossValidators.requiredWhenPresent(dependsOn: "val", value: "", fieldName: "F").isValid)
+        #expect(CrossValidators.requiredWhenPresent(dependsOn: "val", value: "ok", fieldName: "F").isValid)
+        #expect(CrossValidators.requiredWhenPresent(dependsOn: "", value: "", fieldName: "F").isValid)
     }
 
-    func testEqual() {
-        XCTAssertTrue(CrossValidators.equal(1, 1, errorMessage: "err").isValid)
-        XCTAssertFalse(CrossValidators.equal(1, 2, errorMessage: "err").isValid)
+    @Test func testEqual() {
+        #expect(CrossValidators.equal(1, 1, errorMessage: "err").isValid)
+        #expect(!CrossValidators.equal(1, 2, errorMessage: "err").isValid)
     }
 
-    func testNotEqual() {
-        XCTAssertTrue(CrossValidators.notEqual(1, 2, errorMessage: "err").isValid)
-        XCTAssertFalse(CrossValidators.notEqual(1, 1, errorMessage: "err").isValid)
+    @Test func testNotEqual() {
+        #expect(CrossValidators.notEqual(1, 2, errorMessage: "err").isValid)
+        #expect(!CrossValidators.notEqual(1, 1, errorMessage: "err").isValid)
     }
 
-    func testLessThan() {
-        XCTAssertTrue(CrossValidators.lessThan(5, 10).isValid)
-        XCTAssertFalse(CrossValidators.lessThan(10, 10).isValid)
+    @Test func testLessThan() {
+        #expect(CrossValidators.lessThan(5, 10).isValid)
+        #expect(!CrossValidators.lessThan(10, 10).isValid)
     }
 
-    func testGreaterThan() {
-        XCTAssertTrue(CrossValidators.greaterThan(10, 5).isValid)
-        XCTAssertFalse(CrossValidators.greaterThan(5, 5).isValid)
+    @Test func testGreaterThan() {
+        #expect(CrossValidators.greaterThan(10, 5).isValid)
+        #expect(!CrossValidators.greaterThan(5, 5).isValid)
     }
 
-    func testAllComposition() {
+    @Test func testAllComposition() {
         let result = CrossValidators.all([
             { CrossValidators.passwordMatch("a", "a") },
             { CrossValidators.equal(1, 1, errorMessage: "err") }
         ])
-        XCTAssertTrue(result.isValid)
+        #expect(result.isValid)
     }
 
-    func testAllCollectingErrors() {
+    @Test func testAllCollectingErrors() {
         let result = CrossValidators.allCollectingErrors([
             { CrossValidators.passwordMatch("a", "b") },
             { CrossValidators.equal(1, 2, errorMessage: "not equal") }
         ])
-        XCTAssertFalse(result.isValid)
-        XCTAssertTrue(result.errorMessage?.contains("no coinciden") ?? false)
-        XCTAssertTrue(result.errorMessage?.contains("not equal") ?? false)
+        #expect(!result.isValid)
+        #expect(result.errorMessage?.contains("no coinciden") ?? false)
+        #expect(result.errorMessage?.contains("not equal") ?? false)
     }
 }
 
 // MARK: - FormState Tests
 
-@MainActor
-final class FormStateTests: XCTestCase {
+@MainActor @Suite struct FormStateTests {
 
-    func testInitialState() {
+    @Test func testInitialState() {
         let state = FormState()
-        XCTAssertFalse(state.isValid)
-        XCTAssertFalse(state.isSubmitting)
-        XCTAssertTrue(state.errors.isEmpty)
+        #expect(!state.isValid)
+        #expect(!state.isSubmitting)
+        #expect(state.errors.isEmpty)
     }
 
-    func testRegisterAndValidateField() {
+    @Test func testRegisterAndValidateField() {
         let state = FormState()
         state.registerField("name") {
             ValidationResult.invalid("Required")
         }
         state.validate()
-        XCTAssertFalse(state.isValid)
-        XCTAssertEqual(state.error(for: "name"), "Required")
+        #expect(!state.isValid)
+        #expect(state.error(for: "name") == "Required")
     }
 
-    func testValidatePassesWhenAllValid() {
+    @Test func testValidatePassesWhenAllValid() {
         let state = FormState()
         state.registerField("name") {
             ValidationResult.valid()
         }
         state.validate()
-        XCTAssertTrue(state.isValid)
+        #expect(state.isValid)
     }
 
-    func testUnregisterField() {
+    @Test func testUnregisterField() {
         let state = FormState()
         state.registerField("name") {
             ValidationResult.invalid("err")
         }
         state.unregisterField("name")
         state.validate()
-        XCTAssertTrue(state.isValid)
+        #expect(state.isValid)
     }
 
-    func testCrossValidator() {
+    @Test func testCrossValidator() {
         let state = FormState()
         state.registerCrossValidator {
             ValidationResult.invalid("Cross error")
         }
         state.validate()
-        XCTAssertFalse(state.isValid)
-        XCTAssertEqual(state.error(for: "form"), "Cross error")
+        #expect(!state.isValid)
+        #expect(state.error(for: "form") == "Cross error")
     }
 
-    func testClearCrossValidators() {
+    @Test func testClearCrossValidators() {
         let state = FormState()
         state.registerCrossValidator {
             ValidationResult.invalid("err")
         }
         state.clearCrossValidators()
         state.validate()
-        XCTAssertTrue(state.isValid)
+        #expect(state.isValid)
     }
 
-    func testValidateField() {
+    @Test func testValidateField() {
         let state = FormState()
         state.registerField("email") {
             ValidationResult.invalid("Bad email")
         }
         let result = state.validateField("email")
-        XCTAssertFalse(result.isValid)
-        XCTAssertEqual(state.error(for: "email"), "Bad email")
+        #expect(!result.isValid)
+        #expect(state.error(for: "email") == "Bad email")
     }
 
-    func testValidateFieldUnregistered() {
+    @Test func testValidateFieldUnregistered() {
         let state = FormState()
         let result = state.validateField("unknown")
-        XCTAssertTrue(result.isValid)
+        #expect(result.isValid)
     }
 
-    func testClearError() {
+    @Test func testClearError() {
         let state = FormState()
         state.registerField("name") {
             ValidationResult.invalid("err")
         }
         state.validate()
-        XCTAssertNotNil(state.error(for: "name"))
+        #expect(state.error(for: "name") != nil)
         state.clearError(for: "name")
-        XCTAssertNil(state.error(for: "name"))
+        #expect(state.error(for: "name") == nil)
     }
 
-    func testReset() {
+    @Test func testReset() {
         let state = FormState()
         state.registerField("name") {
             ValidationResult.invalid("err")
         }
         state.validate()
         state.reset()
-        XCTAssertFalse(state.isValid)
-        XCTAssertFalse(state.isSubmitting)
-        XCTAssertTrue(state.errors.isEmpty)
+        #expect(!state.isValid)
+        #expect(!state.isSubmitting)
+        #expect(state.errors.isEmpty)
     }
 
-    func testSubmitValid() async {
+    @Test func testSubmitValid() async {
         let state = FormState()
         state.registerField("ok") {
             ValidationResult.valid()
@@ -408,12 +410,12 @@ final class FormStateTests: XCTestCase {
         let result = await state.submit {
             await flag.set()
         }
-        XCTAssertTrue(result)
+        #expect(result)
         let wasExecuted = await flag.value
-        XCTAssertTrue(wasExecuted)
+        #expect(wasExecuted)
     }
 
-    func testSubmitInvalid() async {
+    @Test func testSubmitInvalid() async {
         let state = FormState()
         state.registerField("bad") {
             ValidationResult.invalid("err")
@@ -422,12 +424,12 @@ final class FormStateTests: XCTestCase {
         let result = await state.submit {
             await flag.set()
         }
-        XCTAssertFalse(result)
+        #expect(!result)
         let wasExecuted = await flag.value
-        XCTAssertFalse(wasExecuted)
+        #expect(!wasExecuted)
     }
 
-    func testSubmitCatchesError() async {
+    @Test func testSubmitCatchesError() async {
         let state = FormState()
         state.registerField("ok") {
             ValidationResult.valid()
@@ -435,89 +437,87 @@ final class FormStateTests: XCTestCase {
         let result = await state.submit {
             throw NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "fail"])
         }
-        XCTAssertFalse(result)
-        XCTAssertNotNil(state.error(for: "form"))
+        #expect(!result)
+        #expect(state.error(for: "form") != nil)
     }
 }
 
 // MARK: - BindableProperty Tests
 
-@MainActor
-final class BindablePropertyTests: XCTestCase {
+@MainActor @Suite struct BindablePropertyTests {
 
-    func testInitialValue() {
+    @Test func testInitialValue() {
         @BindableProperty var name: String = "hello"
-        XCTAssertEqual(name, "hello")
+        #expect(name == "hello")
     }
 
-    func testSetValue() {
+    @Test func testSetValue() {
         @BindableProperty var name: String = ""
         name = "world"
-        XCTAssertEqual(name, "world")
+        #expect(name == "world")
     }
 
-    func testValidationOnSet() {
+    @Test func testValidationOnSet() {
         @BindableProperty(validation: Validators.nonEmpty(fieldName: "Name"))
         var name: String = ""
 
         name = ""
-        XCTAssertFalse($name.validationState.isValid)
+        #expect(!$name.validationState.isValid)
 
         name = "hello"
-        XCTAssertTrue($name.validationState.isValid)
+        #expect($name.validationState.isValid)
     }
 
-    func testResetValidation() {
+    @Test func testResetValidation() {
         @BindableProperty(validation: Validators.nonEmpty())
         var name: String = ""
 
         name = ""
-        XCTAssertFalse($name.validationState.isValid)
+        #expect(!$name.validationState.isValid)
 
         $name.resetValidation()
-        XCTAssertTrue($name.validationState.isValid)
-        XCTAssertNil($name.validationState.errorMessage)
+        #expect($name.validationState.isValid)
+        #expect($name.validationState.errorMessage == nil)
     }
 
-    func testManualValidate() {
+    @Test func testManualValidate() {
         var prop = BindableProperty(wrappedValue: "", validation: Validators.nonEmpty())
 
         // Initially valid (no validation run yet)
-        XCTAssertTrue(prop.validationState.isValid)
+        #expect(prop.validationState.isValid)
 
         prop.validate()
-        XCTAssertFalse(prop.validationState.isValid)
+        #expect(!prop.validationState.isValid)
     }
 
-    func testOnChange() {
+    @Test func testOnChange() {
         let counter = CounterBox()
         @BindableProperty(onChange: { @Sendable _ in counter.increment() })
         var name: String = ""
 
         name = "a"
         name = "b"
-        XCTAssertEqual(counter.count, 2)
+        #expect(counter.count == 2)
     }
 }
 
 // MARK: - DebouncedProperty Tests
 
-@MainActor
-final class DebouncedPropertyTests: XCTestCase {
+@MainActor @Suite struct DebouncedPropertyTests {
 
-    func testInitialValue() {
+    @Test func testInitialValue() {
         @DebouncedProperty(debounceInterval: 0.1) var query: String = "initial"
-        XCTAssertEqual(query, "initial")
+        #expect(query == "initial")
     }
 
-    func testSetValue() {
+    @Test func testSetValue() {
         @DebouncedProperty(debounceInterval: 0.1) var query: String = ""
         query = "test"
-        XCTAssertEqual(query, "test")
+        #expect(query == "test")
     }
 
-    func testDefaultInterval() {
+    @Test func testDefaultInterval() {
         @DebouncedProperty var query: String = "default"
-        XCTAssertEqual(query, "default")
+        #expect(query == "default")
     }
 }

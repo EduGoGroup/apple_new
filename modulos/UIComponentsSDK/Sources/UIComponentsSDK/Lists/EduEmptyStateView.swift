@@ -4,7 +4,6 @@ import DesignSystemSDK
 // Nota: DesignTokens debe ser parte del módulo EduAccessibility o importado por separado
 // Si DesignTokens no está incluido en el target, necesitas agregarlo al proyecto de Xcode
 
-@MainActor
 public struct EduEmptyStateView: View {
     private let icon: String
     private let title: String

@@ -11,7 +11,6 @@ import LocalAuthentication
 /// Automatically detects available biometric type and provides
 /// authentication with appropriate icon and feedback.
 @available(iOS 26.0, macOS 26.0, *)
-@MainActor
 public struct EduBiometricButton: View {
     public let action: () -> Void
     public let title: String?
@@ -101,16 +100,22 @@ public struct EduBiometricButton: View {
     }
 
     private func authenticateWithBiometric() {
-        let context = LAContext()
-        let reason = "Authenticate to continue"
+        Task {
+            let context = LAContext()
+            let reason = "Authenticate to continue"
 
-        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason) { success, error in
-            Task { @MainActor in
+            do {
+                let success = try await context.evaluatePolicy(
+                    .deviceOwnerAuthenticationWithBiometrics,
+                    localizedReason: reason
+                )
                 if success {
                     action()
-                } else if let error = error as? LAError {
-                    handleBiometricError(error)
                 }
+            } catch let error as LAError {
+                handleBiometricError(error)
+            } catch {
+                errorMessage = "Unknown error"
             }
         }
     }

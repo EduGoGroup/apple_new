@@ -369,8 +369,9 @@ public extension View {
 /// .headingsRotor(headingRegistry.headings)
 /// ```
 @MainActor
-public final class HeadingRegistry: ObservableObject {
-    @Published public private(set) var headings: [AccessibilityRotorItem] = []
+@Observable
+public final class HeadingRegistry {
+    public private(set) var headings: [AccessibilityRotorItem] = []
 
     public init() {}
 

@@ -1,11 +1,11 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "NetworkSDK",
     platforms: [
-        .iOS(.v18),
-        .macOS(.v15)
+        .iOS(.v26),
+        .macOS(.v26)
     ],
     products: [
         .library(name: "NetworkSDK", targets: ["NetworkSDK"])
@@ -17,14 +17,12 @@ let package = Package(
         .target(
             name: "NetworkSDK",
             dependencies: ["FoundationToolkit"],
-            path: "Sources/NetworkSDK",
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            path: "Sources/NetworkSDK"
         ),
         .testTarget(
             name: "NetworkSDKTests",
             dependencies: ["NetworkSDK"],
-            path: "Tests/NetworkSDKTests",
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            path: "Tests/NetworkSDKTests"
         )
     ]
 )

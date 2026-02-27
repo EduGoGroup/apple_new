@@ -47,7 +47,6 @@ public struct EduTabItem: Identifiable, Sendable {
 /// - Mejor experiencia para navegación en escritorio
 ///
 /// **Nota:** El comportamiento es automáticamente adaptado según la plataforma en compilación.
-@MainActor
 public struct EduTabBar<Content: View>: View {
     @Binding private var selection: String
     private let items: [EduTabItem]
@@ -179,7 +178,6 @@ public final class EduTabBarCoordinator: Sendable {
 // MARK: - Tab Bar with Coordinator
 
 /// TabBar con coordinador integrado
-@MainActor
 public struct EduCoordinatedTabBar<Content: View>: View {
     @State private var coordinator: EduTabBarCoordinator
     private let items: [EduTabItem]

@@ -23,7 +23,6 @@ public enum EduActivityIndicatorStyle: Sendable {
 // MARK: - Activity Indicator
 
 /// Activity Indicator adaptativo por plataforma con accessibility
-@MainActor
 public struct EduActivityIndicator: View {
     private let style: EduActivityIndicatorStyle
     private let color: Color?
@@ -91,7 +90,6 @@ public struct EduActivityIndicator: View {
 // MARK: - Inline Loading
 
 /// Loading inline para uso dentro de botones u otros componentes
-@MainActor
 public struct EduInlineLoader: View {
     private let style: EduActivityIndicatorStyle
     private let tint: Color?

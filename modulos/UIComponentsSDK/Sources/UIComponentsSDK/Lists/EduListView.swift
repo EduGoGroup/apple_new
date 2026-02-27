@@ -8,7 +8,6 @@ public enum ViewState<T>: Sendable where T: Sendable {
     case empty
 }
 
-@MainActor
 public struct EduListView<Item, Content: View>: View where Item: Sendable {
     private let state: ViewState<[Item]>
     private let emptyTitle: String

@@ -70,7 +70,6 @@ public enum SwipeActionRole: Sendable {
 ///     )
 ///
 @available(iOS 26.0, macOS 26.0, watchOS 26.0, tvOS 26.0, visionOS 2.0, *)
-@MainActor
 public struct EduRow<Leading: View, Trailing: View>: View {
     /// Título principal de la fila.
     public let title: String

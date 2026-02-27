@@ -23,7 +23,6 @@ public enum EduProgressBarStyle: Sendable {
 /// Barra de progreso lineal con modo determinado e indeterminado
 ///
 /// Incluye validación de progreso y soporte de accessibility.
-@MainActor
 public struct EduProgressBar: View {
     private let mode: EduProgressBarMode
     private let style: EduProgressBarStyle
@@ -123,7 +122,6 @@ public struct EduProgressBar: View {
 // MARK: - Progress Bar with Label
 
 /// Progress bar con etiqueta de porcentaje
-@MainActor
 public struct EduLabeledProgressBar: View {
     private let progress: Double
     private let showPercentage: Bool
@@ -176,7 +174,6 @@ public struct EduLabeledProgressBar: View {
 // MARK: - Segmented Progress Bar
 
 /// Barra de progreso segmentada para steps
-@MainActor
 public struct EduSegmentedProgressBar: View {
     private let totalSteps: Int
     private let currentStep: Int

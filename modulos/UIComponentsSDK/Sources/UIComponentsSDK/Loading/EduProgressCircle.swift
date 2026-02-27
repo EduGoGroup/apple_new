@@ -4,7 +4,6 @@ import DesignSystemSDK
 // MARK: - Progress Circle
 
 /// Indicador de progreso circular con accessibility y performance optimizado
-@MainActor
 public struct EduProgressCircle: View {
     private let progress: Double
     private let lineWidth: CGFloat
@@ -73,7 +72,6 @@ public struct EduProgressCircle: View {
 // MARK: - Indeterminate Circle
 
 /// Círculo de progreso indeterminado con animación
-@MainActor
 public struct EduIndeterminateCircle: View {
     @State private var isAnimating = false
 
@@ -101,7 +99,6 @@ public struct EduIndeterminateCircle: View {
 // MARK: - Circular Progress with Icon
 
 /// Progreso circular con icono central
-@MainActor
 public struct EduCircularProgressWithIcon: View {
     private let progress: Double
     private let icon: String
@@ -134,7 +131,6 @@ public struct EduCircularProgressWithIcon: View {
 // MARK: - Multi-Ring Progress
 
 /// Progreso circular con múltiples anillos
-@MainActor
 public struct EduMultiRingProgress: View {
     private let rings: [RingData]
 
@@ -170,7 +166,6 @@ public struct EduMultiRingProgress: View {
 // MARK: - Gauge Style Progress
 
 /// Progreso estilo gauge (semi-círculo)
-@MainActor
 public struct EduGaugeProgress: View {
     private let progress: Double
     private let lineWidth: CGFloat

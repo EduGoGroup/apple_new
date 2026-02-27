@@ -193,12 +193,10 @@ private struct AccessibilityHighContrastModifier: ViewModifier {
             .environment(\.accessibilityIncreaseContrast, isIncreaseContrastEnabled)
             .environment(\.accessibilityDifferentiateWithoutColor, isDifferentiateWithoutColorEnabled)
             .onAppear {
-                Task { @MainActor in
-                    updateHighContrastState()
-                }
+                updateHighContrastState()
             }
-            .onReceive(NotificationCenter.default.publisher(for: contrastNotificationName)) { _ in
-                Task { @MainActor in
+            .task {
+                for await _ in NotificationCenter.default.notifications(named: contrastNotificationName) {
                     updateHighContrastState()
                 }
             }

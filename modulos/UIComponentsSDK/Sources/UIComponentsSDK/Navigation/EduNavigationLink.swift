@@ -9,7 +9,6 @@ import SwiftUI
 /// - El link no permite navegación
 /// - Se aplica opacidad reducida (0.6)
 /// - Se aplica el modifier `.disabled(true)` según Apple HIG
-@MainActor
 public struct EduNavigationLink<Label: View, Destination: View>: View {
     private let destination: () -> Destination
     private let label: () -> Label
@@ -49,7 +48,6 @@ public struct EduNavigationLink<Label: View, Destination: View>: View {
 // MARK: - Lazy View Wrapper
 
 /// Wrapper para lazy loading de vistas
-@MainActor
 private struct LazyView<Content: View>: View {
     private let build: () -> Content
 
@@ -65,7 +63,6 @@ private struct LazyView<Content: View>: View {
 // MARK: - String-Based Navigation Link
 
 /// NavigationLink que navega usando strings (útil con coordinadores)
-@MainActor
 public struct EduNavigationLinkValue<Label: View>: View {
     private let value: String
     private let label: () -> Label
@@ -88,7 +85,6 @@ public struct EduNavigationLinkValue<Label: View>: View {
 // MARK: - Navigation Link with Analytics
 
 /// NavigationLink con tracking de navegación
-@MainActor
 public struct EduTrackedNavigationLink<Label: View, Destination: View>: View {
     private let destination: () -> Destination
     private let label: () -> Label
@@ -122,7 +118,6 @@ public struct EduTrackedNavigationLink<Label: View, Destination: View>: View {
 // MARK: - Styled Navigation Link
 
 /// NavigationLink con estilos predefinidos y soporte de disabled state
-@MainActor
 public struct EduStyledNavigationLink<Destination: View>: View {
     private let title: String
     private let subtitle: String?

@@ -17,7 +17,6 @@ import SwiftUI
 /// - watchOS: Picker simplificado
 /// - tvOS: Selector enfocable
 /// - visionOS: Panel espacial
-@MainActor
 public struct ThemeSwitcher: View {
 
     @Environment(\.themeManager) private var themeManager
@@ -302,7 +301,6 @@ public struct ThemeSwitcher: View {
 // MARK: - Theme Option Row (iOS)
 
 #if os(iOS)
-@MainActor
 private struct ThemeOptionRow: View {
     let theme: Theme
     let isSelected: Bool

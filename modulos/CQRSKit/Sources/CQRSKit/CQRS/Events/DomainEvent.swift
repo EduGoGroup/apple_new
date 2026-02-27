@@ -83,7 +83,7 @@ public extension DomainEvent {
 ///     }
 /// }
 /// ```
-public struct AnyDomainEvent: DomainEvent, @unchecked Sendable {
+public struct AnyDomainEvent: DomainEvent, Sendable {
     public let eventId: UUID
     public let occurredAt: Date
     public let metadata: [String: String]

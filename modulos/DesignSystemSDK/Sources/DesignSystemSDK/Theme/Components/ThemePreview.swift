@@ -11,7 +11,6 @@ import SwiftUI
 /// ```swift
 /// ThemePreview(theme: .default)
 /// ```
-@MainActor
 public struct ThemePreview: View {
 
     let theme: Theme
@@ -221,7 +220,6 @@ public struct ThemePreview: View {
 
 // MARK: - Color Swatch
 
-@MainActor
 private struct ColorSwatch: View {
     let name: String
     let color: Color
@@ -245,7 +243,6 @@ private struct ColorSwatch: View {
 
 // MARK: - Palette Row
 
-@MainActor
 private struct PaletteRow: View {
     let name: String
     let scale: PaletteScale
@@ -275,7 +272,6 @@ private struct PaletteRow: View {
 
 // MARK: - Color Chip
 
-@MainActor
 private struct ColorChip: View {
     let color: Color
     let label: String

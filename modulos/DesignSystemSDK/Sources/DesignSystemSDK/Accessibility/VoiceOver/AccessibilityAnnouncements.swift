@@ -108,7 +108,7 @@ public final class AccessibilityAnnouncements: Sendable {
     /// - `.medium`: Respeta throttling (1 segundo entre announcements)
     /// - `.low`: Puede ser descartado si la cola está llena
     public static func announce(_ message: String, priority: AnnouncementPriority = .medium) {
-        Task { @MainActor in
+        Task {
             shared.enqueue(message: message, priority: priority)
         }
     }
@@ -148,7 +148,7 @@ public final class AccessibilityAnnouncements: Sendable {
 
     /// Limpia la cola de announcements pendientes.
     public static func clearQueue() {
-        Task { @MainActor in
+        Task {
             shared.queue.removeAll()
         }
     }
@@ -199,7 +199,7 @@ public final class AccessibilityAnnouncements: Sendable {
             if elapsed < Self.throttleInterval {
                 // Esperar el tiempo restante
                 let delay = Self.throttleInterval - elapsed
-                Task { @MainActor in
+                Task {
                     try? await Task.sleep(for: .seconds(delay))
                     self.processQueue()
                 }
@@ -213,7 +213,7 @@ public final class AccessibilityAnnouncements: Sendable {
 
         // Continuar procesando
         if !queue.isEmpty {
-            Task { @MainActor in
+            Task {
                 try? await Task.sleep(for: .seconds(Self.throttleInterval))
                 self.processQueue()
             }

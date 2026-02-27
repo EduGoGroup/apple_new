@@ -10,7 +10,6 @@ import SwiftUI
 /// Displays a metric with title, value, optional change indicator,
 /// and glass background optimized for iOS 26+.
 @available(iOS 26.0, macOS 26.0, *)
-@MainActor
 public struct EduMetricCard: View {
     public let title: String
     public let value: String
@@ -76,8 +75,7 @@ public struct EduMetricCard: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.glass))
+        .glassEffect(.regular, in: .rect(cornerRadius: DesignTokens.CornerRadius.glass))
     }
 
     @ViewBuilder
@@ -98,11 +96,6 @@ public struct EduMetricCard: View {
         )
     }
 
-    @ViewBuilder
-    private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.glass)
-            .fill(.ultraThinMaterial)
-    }
 }
 
 // MARK: - Convenience Initializers

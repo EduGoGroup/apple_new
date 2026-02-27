@@ -1,11 +1,11 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "FormsSDK",
     platforms: [
-        .iOS(.v18),
-        .macOS(.v15)
+        .iOS(.v26),
+        .macOS(.v26)
     ],
     products: [
         .library(name: "FormsSDK", targets: ["FormsSDK"])
@@ -13,14 +13,12 @@ let package = Package(
     targets: [
         .target(
             name: "FormsSDK",
-            path: "Sources/FormsSDK",
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            path: "Sources/FormsSDK"
         ),
         .testTarget(
             name: "FormsSDKTests",
             dependencies: ["FormsSDK"],
-            path: "Tests/FormsSDKTests",
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            path: "Tests/FormsSDKTests"
         )
     ]
 )

@@ -1,11 +1,11 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "UIComponentsSDK",
     platforms: [
-        .iOS(.v18),
-        .macOS(.v15)
+        .iOS(.v26),
+        .macOS(.v26)
     ],
     products: [
         .library(name: "UIComponentsSDK", targets: ["UIComponentsSDK"])
@@ -18,14 +18,12 @@ let package = Package(
         .target(
             name: "UIComponentsSDK",
             dependencies: ["DesignSystemSDK", "FormsSDK"],
-            path: "Sources/UIComponentsSDK",
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            path: "Sources/UIComponentsSDK"
         ),
         .testTarget(
             name: "UIComponentsSDKTests",
             dependencies: ["UIComponentsSDK"],
-            path: "Tests/UIComponentsSDKTests",
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            path: "Tests/UIComponentsSDKTests"
         )
     ]
 )

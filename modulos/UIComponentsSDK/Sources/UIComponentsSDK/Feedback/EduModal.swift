@@ -26,7 +26,6 @@ public enum EduModalSize: Sendable {
 // MARK: - Modal Content
 
 /// Contenido configurado para un modal
-@MainActor
 public struct EduModalContent<Content: View>: View {
     public let title: String
     public let size: EduModalSize
@@ -229,7 +228,6 @@ extension View {
 
 #if os(iOS) || os(visionOS)
 /// Bottom sheet con detents personalizables
-@MainActor
 public struct EduBottomSheet<Content: View>: View {
     @Binding private var isPresented: Bool
     private let detents: Set<PresentationDetent>
