@@ -116,8 +116,7 @@ public final class MaterialAssignmentViewModel {
     // MARK: - Task Management
 
     /// Task de carga inicial de permisos para cancelación en cleanup
-    /// Marcado como nonisolated(unsafe) para acceso desde deinit
-    nonisolated(unsafe) private var permissionLoadTask: Task<Void, Never>?
+    private var permissionLoadTask: Task<Void, Never>?
 
     // MARK: - Initialization
 
@@ -143,16 +142,6 @@ public final class MaterialAssignmentViewModel {
         permissionLoadTask = Task {
             await loadPermissions()
         }
-    }
-
-    // MARK: - Deinitialization
-
-    /// Limpia recursos al destruir el ViewModel
-    deinit {
-        // Cancelar tasks en progreso
-        permissionLoadTask?.cancel()
-
-        logger.debug("MaterialAssignmentViewModel deinicializado - recursos limpiados")
     }
 
     // MARK: - Permission Loading

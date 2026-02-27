@@ -15,6 +15,7 @@ import EduModels
 /// El menu se alimenta de `MenuService` que filtra items por permisos.
 struct MainScreen: View {
     let container: ServiceContainer
+    var deepLinkHandler: DeepLinkHandler? = nil
 
     @State private var menuItems: [MenuItem] = []
     @State private var selectedItemKey: String?
@@ -26,6 +27,7 @@ struct MainScreen: View {
     @State private var currentSchoolId: String?
     @State private var activeUserContext: ScreenUserContext = .anonymous
     @State private var allSchools: [[String: JSONValue]] = []
+    @State private var deepLinkScreen: DeepLink?
 
     var body: some View {
         AdaptiveNavigationContainer(
@@ -68,6 +70,11 @@ struct MainScreen: View {
         }
         .task { await loadInitialData() }
         .task { await observeMenuChanges() }
+        .onChange(of: deepLinkHandler?.pendingDeepLink) { _, newLink in
+            if let link = newLink {
+                navigateToDeepLink(link)
+            }
+        }
         .sheet(isPresented: $showSchoolSelection) {
             SchoolSelectionScreen(
                 contexts: availableContexts,
@@ -78,6 +85,23 @@ struct MainScreen: View {
                     Task { await switchContext(context) }
                 }
             )
+        }
+        .sheet(item: $deepLinkScreen) { link in
+            NavigationStack {
+                DynamicScreenView(
+                    screenKey: link.screenKey,
+                    screenLoader: container.screenLoader,
+                    dataLoader: container.dataLoader,
+                    networkClient: container.authenticatedNetworkClient,
+                    orchestrator: container.eventOrchestrator,
+                    userContext: activeUserContext
+                )
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cerrar") { deepLinkScreen = nil }
+                    }
+                }
+            }
         }
     }
 
@@ -163,6 +187,33 @@ struct MainScreen: View {
                 selectedItemKey = first.key
             }
         }
+    }
+
+    // MARK: - Deep Link Navigation
+
+    private func navigateToDeepLink(_ link: DeepLink) {
+        deepLinkHandler?.pendingDeepLink = nil
+
+        // Try to find a menu item that matches the deep link screenKey
+        if let itemKey = findMenuItemKey(for: link.screenKey) {
+            debugLog("DEBUG [DeepLink] matched menu item: \(itemKey) for screenKey: \(link.screenKey)")
+            selectedItemKey = itemKey
+        } else {
+            debugLog("DEBUG [DeepLink] no menu match — opening sheet for: \(link.screenKey)")
+            deepLinkScreen = link
+        }
+    }
+
+    private func findMenuItemKey(for screenKey: String) -> String? {
+        for item in menuItems {
+            if item.key == screenKey { return item.key }
+            if item.screens.values.contains(screenKey) { return item.key }
+            for child in item.children {
+                if child.key == screenKey { return child.key }
+                if child.screens.values.contains(screenKey) { return child.key }
+            }
+        }
+        return nil
     }
 
     // MARK: - Context Switching

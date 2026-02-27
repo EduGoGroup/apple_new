@@ -66,17 +66,3 @@ struct ListItemNavigationControl: View {
     }
 }
 
-// MARK: - MetricCard
-
-struct MetricCardControl: View {
-    let slot: Slot
-    let resolvedValue: JSONValue?
-
-    var body: some View {
-        EduMetricCard(
-            title: slot.label ?? "",
-            value: resolvedValue?.stringRepresentation ?? "0",
-            icon: SlotRenderer.sfSymbolName(for: slot.icon ?? "chart.bar.fill")
-        )
-    }
-}

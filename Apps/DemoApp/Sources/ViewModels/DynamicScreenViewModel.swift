@@ -157,6 +157,19 @@ final class DynamicScreenViewModel {
 
     func executeAction(_ action: ActionDefinition) {
         switch action.type {
+        case .navigate:
+            if let config = action.config,
+               case .string(let screenKey) = config["screen_key"] ?? config["screenKey"] {
+                var params: [String: String] = [:]
+                if case .object(let paramsDict) = config["params"] {
+                    for (key, val) in paramsDict {
+                        if let str = val.stringValue {
+                            params[key] = str
+                        }
+                    }
+                }
+                onNavigate?(screenKey, params)
+            }
         case .refresh:
             Task { await refresh() }
         case .logout:
