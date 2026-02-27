@@ -1,8 +1,5 @@
 import SwiftUI
 
-// Nota: DesignTokens debe ser parte del módulo EduAccessibility o importado por separado
-// Si DesignTokens no está incluido en el target, necesitas agregarlo al proyecto de Xcode
-
 @MainActor
 public struct EduEmptyStateView: View {
     private let icon: String
@@ -48,6 +45,7 @@ public struct EduEmptyStateView: View {
             }
         }
         .padding(40)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.glassLarge))
         // MARK: - Accessibility
         .emptyStateGrouped(title: title, description: description)
         .accessibleIdentifier(.emptyState(module: "ui", screen: "list"))
@@ -56,6 +54,56 @@ public struct EduEmptyStateView: View {
         .onAppear {
             AccessibilityAnnouncements.announce("\(title). \(description)", priority: .medium)
         }
+    }
+}
+
+// MARK: - Factory Initializers
+
+extension EduEmptyStateView {
+    /// Empty state for no search results.
+    public static func noSearchResults(query: String) -> EduEmptyStateView {
+        EduEmptyStateView(
+            icon: "magnifyingglass",
+            title: "Sin resultados",
+            description: "No se encontraron resultados para \"\(query)\". Intenta con otros términos."
+        )
+    }
+
+    /// Empty state for an empty list with optional create action.
+    public static func emptyList(
+        resourceName: String,
+        canCreate: Bool = false,
+        onCreate: (() -> Void)? = nil
+    ) -> EduEmptyStateView {
+        EduEmptyStateView(
+            icon: "tray",
+            title: "Sin \(resourceName)",
+            description: canCreate
+                ? "Comienza agregando tu primer elemento."
+                : "No hay \(resourceName) disponibles.",
+            actionTitle: canCreate ? "Crear \(resourceName)" : nil,
+            action: onCreate
+        )
+    }
+
+    /// Generic no-data empty state.
+    public static func noData() -> EduEmptyStateView {
+        EduEmptyStateView(
+            icon: "doc.text",
+            title: "Sin datos",
+            description: "No hay información disponible en este momento."
+        )
+    }
+
+    /// Network error empty state with retry.
+    public static func networkError(onRetry: @escaping () -> Void) -> EduEmptyStateView {
+        EduEmptyStateView(
+            icon: "wifi.slash",
+            title: "Sin conexión",
+            description: "Verifica tu conexión a internet e intenta nuevamente.",
+            actionTitle: "Reintentar",
+            action: onRetry
+        )
     }
 }
 
@@ -85,6 +133,24 @@ public struct EduEmptyStateView: View {
     ) {
         print("Acción ejecutada")
     }
+}
+
+#Preview("No Search Results") {
+    EduEmptyStateView.noSearchResults(query: "matemáticas")
+}
+
+#Preview("Empty List") {
+    EduEmptyStateView.emptyList(resourceName: "cursos", canCreate: true) {
+        print("Crear curso")
+    }
+}
+
+#Preview("No Data") {
+    EduEmptyStateView.noData()
+}
+
+#Preview("Network Error") {
+    EduEmptyStateView.networkError { print("Retry") }
 }
 
 #Preview("Dark Mode") {

@@ -4,6 +4,7 @@ import EduPresentation
 import EduNetwork
 import EduDomain
 import EduCore
+import EduModels
 
 // MARK: - Main Screen
 
@@ -23,6 +24,8 @@ struct MainScreen: View {
     @State private var schoolName: String?
     @State private var availableContexts: [UserContextDTO] = []
     @State private var currentSchoolId: String?
+    @State private var activeUserContext: ScreenUserContext = .anonymous
+    @State private var allSchools: [[String: JSONValue]] = []
 
     var body: some View {
         AdaptiveNavigationContainer(
@@ -33,7 +36,7 @@ struct MainScreen: View {
                     userName: userName,
                     roleName: roleName,
                     schoolName: schoolName,
-                    showSchoolSwitch: availableContexts.count > 1,
+                    showSchoolSwitch: roleName == "super_admin" || availableContexts.count > 1,
                     onSchoolSwitch: { showSchoolSelection = true }
                 )
             },
@@ -49,12 +52,18 @@ struct MainScreen: View {
                 )
             }
         ) { item in
-            let screenKey = item.screens["main"] ?? item.key
+            let screenKey = item.screens["default"]
+                ?? item.screens["list"]
+                ?? item.screens["dashboard"]
+                ?? item.screens.values.first
+                ?? item.key
             DynamicScreenView(
                 screenKey: screenKey,
                 screenLoader: container.screenLoader,
                 dataLoader: container.dataLoader,
-                networkClient: container.authenticatedNetworkClient
+                networkClient: container.authenticatedNetworkClient,
+                orchestrator: container.eventOrchestrator,
+                userContext: activeUserContext
             )
         }
         .task { await loadInitialData() }
@@ -63,6 +72,7 @@ struct MainScreen: View {
             SchoolSelectionScreen(
                 contexts: availableContexts,
                 currentSchoolId: currentSchoolId,
+                schools: allSchools,
                 onSelect: { context in
                     showSchoolSelection = false
                     Task { await switchContext(context) }
@@ -74,19 +84,75 @@ struct MainScreen: View {
     // MARK: - Data Loading
 
     private func loadInitialData() async {
+        debugLog("DEBUG [MainScreen] loadInitialData started")
+
         // Cargar info del usuario
         if let context = await container.authService.activeContext {
             userName = await container.authService.authenticatedUser?.fullName ?? ""
             roleName = context.roleName
             schoolName = context.schoolName
             currentSchoolId = context.schoolId
+            activeUserContext = ScreenUserContext(auth: context)
+            debugLog("DEBUG [MainScreen] user: \(userName), role: \(roleName), school: \(schoolName ?? "none")")
+        } else {
+            debugLog("DEBUG [MainScreen] NO activeContext found!")
         }
 
         // Cargar bundle y construir menu
         if let bundle = await container.syncService.currentBundle {
+            debugLog("DEBUG [MainScreen] bundle found — menu DTOs: \(bundle.menu.count), permissions: \(bundle.permissions.count)")
             let permissions = await container.authService.activeContext?.permissions ?? []
+            debugLog("DEBUG [MainScreen] user permissions count: \(permissions.count)")
             await container.menuService.updateMenu(from: bundle, permissions: permissions)
             availableContexts = bundle.availableContexts
+
+            // Also set menuItems directly to avoid race with stream listener
+            let filtered = await container.menuService.currentMenu
+            debugLog("DEBUG [MainScreen] filtered menu items: \(filtered.count)")
+            for item in filtered {
+                debugLog("DEBUG [MainScreen] menuItem: key=\(item.key), name=\(item.displayName), children=\(item.children.count)")
+            }
+            menuItems = filtered
+            if selectedItemKey == nil, let first = filtered.first {
+                selectedItemKey = first.key
+            }
+
+            // super_admin sin escuela seleccionada → cargar escuelas del API
+            if roleName == "super_admin" && currentSchoolId == nil {
+                debugLog("DEBUG [MainScreen] super_admin without school — loading schools from API")
+                await loadSchoolsForSuperAdmin()
+                if !allSchools.isEmpty {
+                    showSchoolSelection = true
+                }
+            }
+        } else {
+            debugLog("DEBUG [MainScreen] NO bundle found! syncService.currentBundle is nil")
+        }
+    }
+
+    private func loadSchoolsForSuperAdmin() async {
+        do {
+            let raw = try await container.dataLoader.loadData(
+                endpoint: "admin:/api/v1/schools",
+                config: nil
+            )
+            var schools: [[String: JSONValue]] = []
+            for key in ["items", "data", "results"] {
+                if case .array(let array) = raw[key] {
+                    schools = array.compactMap { element in
+                        if case .object(let dict) = element { return dict }
+                        return nil
+                    }
+                    break
+                }
+            }
+            if schools.isEmpty {
+                schools = [raw]
+            }
+            allSchools = schools
+            debugLog("DEBUG [MainScreen] loaded \(schools.count) schools for super_admin")
+        } catch {
+            debugLog("DEBUG [MainScreen] failed to load schools: \(error)")
         }
     }
 
@@ -111,7 +177,9 @@ struct MainScreen: View {
             // Actualizar UI
             roleName = context.roleName
             schoolName = context.schoolName
+            currentSchoolId = context.schoolId
             availableContexts = bundle.availableContexts
+            activeUserContext = ScreenUserContext(dto: context)
             selectedItemKey = nil
         } catch {
             // Error silencioso — el usuario permanece en el contexto actual

@@ -72,6 +72,7 @@ private actor MockNetworkClient: NetworkClientProtocol {
 // MARK: - Fixtures
 
 private let testAPIConfig = APIConfiguration(
+    iamBaseURL: "https://iam.test.com",
     adminBaseURL: "https://admin.test.com",
     mobileBaseURL: "https://mobile.test.com",
     timeout: 10,
@@ -209,7 +210,7 @@ struct SyncServiceTests {
         #expect(count == 1)
 
         let request = await mock.requestHistory.first
-        #expect(request?.url == "https://mobile.test.com/api/v1/sync/bundle")
+        #expect(request?.url == "https://iam.test.com/api/v1/sync/bundle")
     }
 
     @Test("fullSync persists bundle via LocalSyncStore")
@@ -326,7 +327,7 @@ struct SyncServiceTests {
         _ = try await service.deltaSync(currentHashes: ["menu": "h1"])
 
         let request = await mock.requestHistory.first
-        #expect(request?.url == "https://mobile.test.com/api/v1/sync/delta")
+        #expect(request?.url == "https://iam.test.com/api/v1/sync/delta")
     }
 
     // MARK: - Sync On Launch

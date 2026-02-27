@@ -26,11 +26,36 @@ public enum ToolbarMode: Sendable {
     case titleOnly
 }
 
+/// Action for the detail mode context menu.
+public struct ToolbarContextAction: Identifiable, Sendable {
+    public let id: String
+    public let title: String
+    public let icon: String
+    public let role: ButtonRole?
+    public let action: @Sendable () -> Void
+
+    public init(
+        id: String,
+        title: String,
+        icon: String,
+        role: ButtonRole? = nil,
+        action: @escaping @Sendable () -> Void
+    ) {
+        self.id = id
+        self.title = title
+        self.icon = icon
+        self.role = role
+        self.action = action
+    }
+}
+
 /// Toolbar dinamico que cambia segun el modo de pantalla.
 public struct EduDynamicToolbar: ViewModifier {
     private let mode: ToolbarMode
     private let title: String
     private let canCreate: Bool
+    private let pendingMutationCount: Int
+    private let contextActions: [ToolbarContextAction]
     private let onBack: (() -> Void)?
     private let onSave: (() -> Void)?
     private let onCreate: (() -> Void)?
@@ -43,6 +68,8 @@ public struct EduDynamicToolbar: ViewModifier {
         mode: ToolbarMode,
         title: String,
         canCreate: Bool = false,
+        pendingMutationCount: Int = 0,
+        contextActions: [ToolbarContextAction] = [],
         onBack: (() -> Void)? = nil,
         onSave: (() -> Void)? = nil,
         onCreate: (() -> Void)? = nil,
@@ -51,6 +78,8 @@ public struct EduDynamicToolbar: ViewModifier {
         self.mode = mode
         self.title = title
         self.canCreate = canCreate
+        self.pendingMutationCount = pendingMutationCount
+        self.contextActions = contextActions
         self.onBack = onBack
         self.onSave = onSave
         self.onCreate = onCreate
@@ -70,10 +99,16 @@ public struct EduDynamicToolbar: ViewModifier {
                         HStack(spacing: DesignTokens.Spacing.small) {
                             if onSearch != nil {
                                 Button {
-                                    isSearching.toggle()
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        isSearching.toggle()
+                                    }
                                 } label: {
                                     Image(systemName: "magnifyingglass")
                                 }
+                            }
+
+                            if pendingMutationCount > 0 {
+                                pendingBadge
                             }
 
                             if canCreate, let onCreate {
@@ -106,7 +141,12 @@ public struct EduDynamicToolbar: ViewModifier {
                     }
                     if let onSave {
                         ToolbarItem(placement: .confirmationAction) {
-                            Button("Guardar") { onSave() }
+                            HStack(spacing: DesignTokens.Spacing.small) {
+                                if pendingMutationCount > 0 {
+                                    pendingBadge
+                                }
+                                Button("Guardar") { onSave() }
+                            }
                         }
                     }
                 }
@@ -124,12 +164,46 @@ public struct EduDynamicToolbar: ViewModifier {
                             }
                         }
                     }
+                    if !contextActions.isEmpty {
+                        ToolbarItem(placement: .primaryAction) {
+                            Menu {
+                                ForEach(contextActions) { action in
+                                    Button(role: action.role) {
+                                        action.action()
+                                    } label: {
+                                        Label(action.title, systemImage: action.icon)
+                                    }
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                            }
+                        }
+                    }
                 }
 
         case .titleOnly:
             content
                 .navigationTitle(title)
+                .toolbar {
+                    if pendingMutationCount > 0 {
+                        ToolbarItem(placement: .primaryAction) {
+                            pendingBadge
+                        }
+                    }
+                }
         }
+    }
+
+    // MARK: - Private
+
+    private var pendingBadge: some View {
+        Text("\(pendingMutationCount)")
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(.orange, in: .capsule)
+            .accessibilityLabel("\(pendingMutationCount) pending changes")
     }
 }
 
@@ -141,6 +215,8 @@ extension View {
         mode: ToolbarMode,
         title: String,
         canCreate: Bool = false,
+        pendingMutationCount: Int = 0,
+        contextActions: [ToolbarContextAction] = [],
         onBack: (() -> Void)? = nil,
         onSave: (() -> Void)? = nil,
         onCreate: (() -> Void)? = nil,
@@ -151,6 +227,8 @@ extension View {
                 mode: mode,
                 title: title,
                 canCreate: canCreate,
+                pendingMutationCount: pendingMutationCount,
+                contextActions: contextActions,
                 onBack: onBack,
                 onSave: onSave,
                 onCreate: onCreate,

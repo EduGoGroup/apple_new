@@ -4,6 +4,7 @@
 import EduFoundation
 import EduCore
 import EduInfrastructure
+import EduDynamicUI
 
 /// EduDomain module metadata
 public enum EduDomain {

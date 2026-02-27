@@ -71,4 +71,22 @@ public struct ScreenBundleDTO: Codable, Sendable, Equatable {
         self.slotData = slotData
         self.handlerKey = handlerKey
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        screenKey = try container.decode(String.self, forKey: .screenKey)
+        screenName = try container.decode(String.self, forKey: .screenName)
+        pattern = try container.decode(String.self, forKey: .pattern)
+        // version can be String or Int from the backend
+        if let stringVersion = try? container.decode(String.self, forKey: .version) {
+            version = stringVersion
+        } else if let intVersion = try? container.decode(Int.self, forKey: .version) {
+            version = String(intVersion)
+        } else {
+            version = "0"
+        }
+        template = try container.decode(JSONValue.self, forKey: .template)
+        slotData = try container.decodeIfPresent(JSONValue.self, forKey: .slotData)
+        handlerKey = try container.decodeIfPresent(String.self, forKey: .handlerKey)
+    }
 }
