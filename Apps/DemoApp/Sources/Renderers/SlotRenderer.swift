@@ -127,7 +127,13 @@ struct SlotRenderer: View {
                 )
 
             case .metricCard:
-                MetricCardControl(slot: slot, resolvedValue: resolvedValue)
+                MetricCardControl(
+                    slot: slot,
+                    resolvedValue: resolvedValue,
+                    data: data,
+                    actions: actions,
+                    onAction: { onAction($0) }
+                )
             }
         }
     }

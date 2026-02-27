@@ -1,8 +1,9 @@
-import XCTest
+import Testing
 @testable import EduFeatures
 
-final class FeaturesTests: XCTestCase {
-    func testPlaceholder() {
-        XCTAssertTrue(true)
+@Suite
+struct FeaturesTests {
+    @Test func placeholder() {
+        #expect(true)
     }
 }

@@ -2,6 +2,7 @@ import EduCore
 import EduNetwork
 import EduDomain
 import EduDynamicUI
+import EduPresentation
 import Observation
 
 @MainActor
@@ -12,6 +13,7 @@ final class ServiceContainer {
 
     let plainNetworkClient: NetworkClient
     let authenticatedNetworkClient: NetworkClient
+    let networkObserver: NetworkObserver
 
     // MARK: - Auth
 
@@ -21,6 +23,12 @@ final class ServiceContainer {
 
     let syncService: SyncService
     let localSyncStore: LocalSyncStore
+
+    // MARK: - Offline
+
+    let mutationQueue: MutationQueue
+    let syncEngine: SyncEngine
+    let connectivitySyncManager: ConnectivitySyncManager
 
     // MARK: - Menu
 
@@ -36,6 +44,16 @@ final class ServiceContainer {
     let contractRegistry: ContractRegistry
     let eventOrchestrator: EventOrchestrator
 
+    // MARK: - i18n
+
+    let serverStringResolver: ServerStringResolver
+    let glossaryProvider: GlossaryProvider
+    let localeService: LocaleService
+
+    // MARK: - Feedback
+
+    let toastManager: ToastManager
+
     // MARK: - Config
 
     let apiConfiguration: APIConfiguration
@@ -50,14 +68,17 @@ final class ServiceContainer {
         let plainClient = NetworkClient()
         self.plainNetworkClient = plainClient
 
-        // 2. AuthService (usa plain client para evitar dependencia circular)
+        // 2. NetworkObserver (sin dependencias)
+        self.networkObserver = NetworkObserver()
+
+        // 3. AuthService (usa plain client para evitar dependencia circular)
         let authService = AuthService(
             networkClient: plainClient,
             apiConfig: config
         )
         self.authService = authService
 
-        // 3. Authenticated network client (con AuthenticationInterceptor)
+        // 4. Authenticated network client (con AuthenticationInterceptor)
         let authInterceptor = AuthenticationInterceptor.standard(
             tokenProvider: authService,
             sessionExpiredHandler: authService
@@ -65,21 +86,22 @@ final class ServiceContainer {
         let authenticatedClient = NetworkClient(interceptors: [authInterceptor])
         self.authenticatedNetworkClient = authenticatedClient
 
-        // 4. LocalSyncStore
+        // 5. LocalSyncStore
         let localSyncStore = LocalSyncStore()
         self.localSyncStore = localSyncStore
 
-        // 5. MenuService
+        // 6. MenuService
         self.menuService = MenuService()
 
-        // 6. SyncService (usa authenticated client + local store)
-        self.syncService = SyncService(
+        // 7. SyncService (usa authenticated client + local store)
+        let syncService = SyncService(
             networkClient: authenticatedClient,
             localStore: localSyncStore,
             apiConfig: config
         )
+        self.syncService = syncService
 
-        // 7. DynamicUI loaders (usan authenticated client)
+        // 8. DynamicUI loaders (usan authenticated client)
         self.screenLoader = ScreenLoader(
             networkClient: authenticatedClient,
             baseURL: config.mobileBaseURL
@@ -90,7 +112,7 @@ final class ServiceContainer {
             mobileBaseURL: config.mobileBaseURL
         )
 
-        // 8. Contract registry + orchestrator
+        // 9. Contract registry + orchestrator
         let registry = ContractRegistry()
         registry.registerDefaults()
         self.contractRegistry = registry
@@ -99,5 +121,29 @@ final class ServiceContainer {
             networkClient: authenticatedClient,
             dataLoader: self.dataLoader
         )
+
+        // 10. Offline: mutation queue → sync engine → connectivity manager
+        let mutationQueue = MutationQueue()
+        self.mutationQueue = mutationQueue
+
+        let syncEngine = SyncEngine(
+            mutationQueue: mutationQueue,
+            networkClient: authenticatedClient
+        )
+        self.syncEngine = syncEngine
+
+        self.connectivitySyncManager = ConnectivitySyncManager(
+            networkObserver: self.networkObserver,
+            syncEngine: syncEngine,
+            syncService: syncService
+        )
+
+        // 11. i18n services
+        self.serverStringResolver = ServerStringResolver()
+        self.glossaryProvider = GlossaryProvider()
+        self.localeService = LocaleService()
+
+        // 12. Feedback
+        self.toastManager = ToastManager.shared
     }
 }
