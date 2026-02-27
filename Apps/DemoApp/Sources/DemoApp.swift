@@ -2,6 +2,7 @@ import SwiftUI
 import EduPresentation
 import EduDynamicUI
 import EduNetwork
+import EduDomain
 
 #if canImport(AppKit)
 import AppKit
@@ -36,7 +37,11 @@ struct DemoApp: App {
             Group {
                 switch currentRoute {
                 case .splash:
-                    SplashView(authService: container.authService) { isAuthenticated in
+                    SplashView(
+                        authService: container.authService,
+                        syncService: container.syncService,
+                        screenLoader: container.screenLoader
+                    ) { isAuthenticated in
                         currentRoute = isAuthenticated ? .main : .login
                     }
 
@@ -50,9 +55,13 @@ struct DemoApp: App {
                     MainScreen(
                         screenLoader: container.screenLoader,
                         dataLoader: container.dataLoader,
-                        networkClient: container.networkClient,
+                        networkClient: container.authenticatedNetworkClient,
                         onLogout: {
-                            Task { await container.authService.logout() }
+                            Task {
+                                await container.authService.logout()
+                                await container.syncService.clear()
+                                await container.screenLoader.clearCache()
+                            }
                             currentRoute = .login
                         }
                     )
@@ -63,7 +72,6 @@ struct DemoApp: App {
         #if os(macOS)
         .defaultSize(width: 900, height: 600)
         .commands {
-            // Garantizar menus de edicion de texto (Cut/Copy/Paste/Select All)
             TextEditingCommands()
         }
         #endif

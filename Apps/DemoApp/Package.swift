@@ -10,6 +10,7 @@ let package = Package(
     dependencies: [
         .package(path: "../../Packages/Core"),
         .package(path: "../../Packages/Infrastructure"),
+        .package(path: "../../Packages/Domain"),
         .package(path: "../../Packages/Presentation"),
         .package(path: "../../Packages/Features"),
         .package(path: "../../Packages/DynamicUI")
@@ -23,7 +24,8 @@ let package = Package(
                 .product(name: "EduDynamicUI", package: "DynamicUI"),
                 .product(name: "EduNetwork", package: "Infrastructure"),
                 .product(name: "EduStorage", package: "Infrastructure"),
-                .product(name: "EduCore", package: "Core")
+                .product(name: "EduCore", package: "Core"),
+                .product(name: "EduDomain", package: "Domain")
             ],
             path: "Sources"
         )

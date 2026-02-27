@@ -1,0 +1,30 @@
+{
+  "global_stats": {
+    "total_users": 15000,
+    "total_materials": 2500,
+    "total_schools": 150,
+    "total_teachers": 800,
+    "total_students": 12000,
+    "total_assessments": 45000,
+    "average_progress": 68.5
+  },
+  "global_stats_with_additional": {
+    "total_users": 15000,
+    "total_materials": 2500,
+    "total_schools": 150,
+    "total_teachers": 800,
+    "total_students": 12000,
+    "total_assessments": 45000,
+    "average_progress": 68.5,
+    "active_sessions": 1250,
+    "materials_uploaded_today": 45,
+    "assessments_completed_today": 890,
+    "peak_usage_hour": 14,
+    "system_health": "healthy"
+  },
+  "global_stats_minimal": {
+    "total_users": 100,
+    "total_materials": 10
+  },
+  "global_stats_empty": {}
+}
