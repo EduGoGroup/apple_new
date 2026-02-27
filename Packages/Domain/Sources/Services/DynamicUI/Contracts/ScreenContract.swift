@@ -8,7 +8,7 @@ import EduDynamicUI
 /// - Configuracion de datos opcional
 /// - Handlers personalizados para eventos especificos
 public protocol ScreenContract: Sendable {
-    /// Clave unica de la pantalla (e.g. "schools:list").
+    /// Clave unica de la pantalla (e.g. "schools-list").
     var screenKey: String { get }
 
     /// Recurso que gestiona (e.g. "schools").

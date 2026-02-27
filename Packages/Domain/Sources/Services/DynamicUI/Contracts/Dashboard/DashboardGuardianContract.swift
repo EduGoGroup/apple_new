@@ -1,10 +1,10 @@
 /// Contrato para el dashboard de guardian.
 public struct DashboardGuardianContract: ScreenContract {
-    public let screenKey = "dashboard:guardian"
+    public let screenKey = "dashboard-guardian"
     public let resource = "dashboard"
 
     private let base = BaseDashboardContract(
-        screenKey: "dashboard:guardian",
+        screenKey: "dashboard-guardian",
         apiPrefix: "mobile:"
     )
 

@@ -1,10 +1,10 @@
 /// Contrato para el dashboard de superadmin.
 public struct DashboardSuperadminContract: ScreenContract {
-    public let screenKey = "dashboard:superadmin"
+    public let screenKey = "dashboard-superadmin"
     public let resource = "dashboard"
 
     private let base = BaseDashboardContract(
-        screenKey: "dashboard:superadmin",
+        screenKey: "dashboard-superadmin",
         apiPrefix: "admin:"
     )
 

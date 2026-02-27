@@ -1,10 +1,10 @@
 /// Contrato para el CRUD individual de material.
 public struct MaterialCrudContract: ScreenContract {
-    public let screenKey = "materials:crud"
+    public let screenKey = "materials-crud"
     public let resource = "materials"
 
     private let crud = BaseCrudContract(
-        screenKey: "materials:crud",
+        screenKey: "materials-crud",
         resource: "materials",
         apiPrefix: "mobile:",
         basePath: "/api/v1/materials"

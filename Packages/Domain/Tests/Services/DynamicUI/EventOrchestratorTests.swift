@@ -104,7 +104,7 @@ struct EventOrchestratorTests {
             dataLoader: loader
         )
         let context = EventContext(
-            screenKey: "schools:list",
+            screenKey: "schools-list",
             userContext: ScreenUserContext(roleId: "1", roleName: "guest", permissions: [])
         )
         let result = await orchestrator.execute(event: .loadData, context: context)
@@ -247,7 +247,7 @@ struct EventOrchestratorTests {
             dataLoader: loader
         )
         let context = EventContext(
-            screenKey: "schools:list",
+            screenKey: "schools-list",
             userContext: ScreenUserContext(
                 roleId: "1",
                 roleName: "admin",
@@ -256,7 +256,7 @@ struct EventOrchestratorTests {
         )
         let result = await orchestrator.execute(event: .create, context: context)
         if case .navigateTo(let key, _) = result {
-            #expect(key == "schools:crud")
+            #expect(key == "schools-crud")
         } else {
             #expect(Bool(false), "Expected navigateTo result")
         }
@@ -279,7 +279,7 @@ struct EventOrchestratorTests {
             dataLoader: loader
         )
         let context = EventContext(
-            screenKey: "schools:list",
+            screenKey: "schools-list",
             userContext: ScreenUserContext(
                 roleId: "1",
                 roleName: "admin",
@@ -289,7 +289,7 @@ struct EventOrchestratorTests {
         )
         let result = await orchestrator.execute(event: .selectItem, context: context)
         if case .navigateTo(let key, let params) = result {
-            #expect(key == "schools:crud")
+            #expect(key == "schools-crud")
             #expect(params["id"] == "school-42")
         } else {
             #expect(Bool(false), "Expected navigateTo result")

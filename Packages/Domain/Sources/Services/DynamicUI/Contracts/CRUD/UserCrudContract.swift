@@ -1,10 +1,10 @@
 /// Contrato para el CRUD individual de usuario.
 public struct UserCrudContract: ScreenContract {
-    public let screenKey = "users:crud"
+    public let screenKey = "users-crud"
     public let resource = "users"
 
     private let crud = BaseCrudContract(
-        screenKey: "users:crud",
+        screenKey: "users-crud",
         resource: "users",
         apiPrefix: "admin:",
         basePath: "/api/v1/users"

@@ -6,14 +6,14 @@ import EduCore
 struct BaseCrudContractTests {
 
     let contract = BaseCrudContract(
-        screenKey: "schools:list",
+        screenKey: "schools-list",
         resource: "schools",
         apiPrefix: "admin:",
         basePath: "/api/v1/schools"
     )
 
     let context = EventContext(
-        screenKey: "schools:list",
+        screenKey: "schools-list",
         userContext: ScreenUserContext(roleId: "1", roleName: "admin", permissions: ["schools:read"])
     )
 
@@ -38,7 +38,7 @@ struct BaseCrudContractTests {
     @Test("search returns endpoint with query")
     func searchEndpoint() {
         let ctx = EventContext(
-            screenKey: "schools:list",
+            screenKey: "schools-list",
             userContext: .anonymous,
             searchQuery: "Lincoln"
         )
@@ -55,7 +55,7 @@ struct BaseCrudContractTests {
     @Test("saveExisting returns endpoint with ID")
     func saveExistingEndpoint() {
         let ctx = EventContext(
-            screenKey: "schools:list",
+            screenKey: "schools-list",
             userContext: .anonymous,
             selectedItem: ["id": .string("123")]
         )
@@ -72,7 +72,7 @@ struct BaseCrudContractTests {
     @Test("delete returns endpoint with ID")
     func deleteEndpoint() {
         let ctx = EventContext(
-            screenKey: "schools:list",
+            screenKey: "schools-list",
             userContext: .anonymous,
             selectedItem: ["id": .string("456")]
         )

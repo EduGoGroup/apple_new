@@ -103,7 +103,7 @@ struct SlotRenderer: View {
                 LabelControl(slot: slot, resolvedValue: resolvedValue)
 
             case .icon:
-                IconControl(slot: slot)
+                IconControl(slot: slot, resolvedValue: resolvedValue)
 
             case .avatar:
                 AvatarControl(slot: slot, resolvedValue: resolvedValue)

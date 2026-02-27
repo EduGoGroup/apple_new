@@ -47,6 +47,9 @@ final class DynamicScreenViewModel {
             screenState = .ready(screen)
             if screen.dataEndpoint != nil {
                 await loadData(screen: screen)
+            } else if orchestrator != nil {
+                // Backend no envia dataEndpoint; usar contract via orchestrator
+                await executeEvent(.loadData)
             }
         } catch {
             screenState = .error(error.localizedDescription)
@@ -187,7 +190,11 @@ final class DynamicScreenViewModel {
                 alertMessage = message
             }
             if case .object(let dict) = data {
-                let items = extractItems(from: dict)
+                var items = extractItems(from: dict)
+                // Aplicar fieldMapping del contract si existe
+                if let mapping = resolveFieldMapping() {
+                    items = applyFieldMapping(items: items, mapping: mapping)
+                }
                 let pageSize = 20
                 dataState = .success(
                     items: items,
@@ -232,5 +239,36 @@ final class DynamicScreenViewModel {
             }
         }
         return [raw]
+    }
+
+    private func resolveFieldMapping() -> [String: String]? {
+        guard case .ready(let screen) = screenState else { return nil }
+        // Primero intentar desde el screen definition (backend)
+        if let mapping = screen.dataConfig?.fieldMapping, !mapping.isEmpty {
+            return mapping
+        }
+        // Fallback: obtener desde el contract registry via orchestrator
+        return nil
+    }
+
+    private func applyFieldMapping(
+        items: [[String: JSONValue]],
+        mapping: [String: String]
+    ) -> [[String: JSONValue]] {
+        items.map { item in
+            var mapped = item
+            for (apiField, templateField) in mapping {
+                if let value = item[apiField] {
+                    if templateField == "status", case .bool(let b) = value {
+                        mapped[templateField] = .string(b ? "Activo" : "Inactivo")
+                    } else {
+                        mapped[templateField] = value
+                    }
+                }
+            }
+            mapped.removeValue(forKey: "created_at")
+            mapped.removeValue(forKey: "updated_at")
+            return mapped
+        }
     }
 }

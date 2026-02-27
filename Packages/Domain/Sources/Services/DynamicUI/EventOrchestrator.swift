@@ -64,7 +64,7 @@ public actor EventOrchestrator {
             return Self.resolveNavigation(contract: contract, context: context)
 
         case .create:
-            let formKey = "\(contract.screenKey.replacingOccurrences(of: ":list", with: "")):crud"
+            let formKey = "\(contract.screenKey.replacingOccurrences(of: "-list", with: ""))-crud"
             return .navigateTo(screenKey: formKey)
         }
     }
@@ -111,10 +111,65 @@ public actor EventOrchestrator {
                     config: config
                 )
             }
+
+            // Aplicar fieldMapping si existe en el contract
+            if let mapping = config?.fieldMapping, !mapping.isEmpty {
+                let mapped = Self.applyFieldMapping(
+                    data: data,
+                    mapping: mapping,
+                    defaults: config?.defaultValues
+                )
+                return .success(data: .object(mapped))
+            }
             return .success(data: .object(data))
         } catch {
             return .error(message: error.localizedDescription, canRetry: true)
         }
+    }
+
+    /// Aplica field mapping a los items dentro de un response dict.
+    static func applyFieldMapping(
+        data: [String: JSONValue],
+        mapping: [String: String],
+        defaults: [String: String]? = nil
+    ) -> [String: JSONValue] {
+        var result = data
+        for key in ["items", "data", "results"] {
+            if case .array(let array) = data[key] {
+                let mapped = array.map { element -> JSONValue in
+                    guard case .object(var dict) = element else { return element }
+                    for (apiField, templateField) in mapping {
+                        if let value = dict[apiField] {
+                            // Convertir booleans a texto legible para status
+                            if templateField == "status" {
+                                if case .bool(let b) = value {
+                                    dict[templateField] = .string(b ? "Activo" : "Inactivo")
+                                } else {
+                                    dict[templateField] = value
+                                }
+                            } else {
+                                dict[templateField] = value
+                            }
+                        }
+                    }
+                    // Inyectar valores por defecto para campos que el template espera
+                    if let defaults {
+                        for (field, value) in defaults {
+                            if dict[field] == nil {
+                                dict[field] = .string(value)
+                            }
+                        }
+                    }
+                    // Remover created_at/updated_at para evitar ruido visual
+                    dict.removeValue(forKey: "created_at")
+                    dict.removeValue(forKey: "updated_at")
+                    return .object(dict)
+                }
+                result[key] = .array(mapped)
+                break
+            }
+        }
+        return result
     }
 
     private func executeWrite(
@@ -193,7 +248,7 @@ public actor EventOrchestrator {
             return .noOp
         }
 
-        let detailKey = "\(contract.screenKey.replacingOccurrences(of: ":list", with: "")):crud"
+        let detailKey = "\(contract.screenKey.replacingOccurrences(of: "-list", with: ""))-crud"
         return .navigateTo(screenKey: detailKey, params: ["id": id])
     }
 }

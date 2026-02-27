@@ -1,10 +1,10 @@
 /// Contrato para el CRUD individual de membership.
 public struct MembershipCrudContract: ScreenContract {
-    public let screenKey = "memberships:crud"
+    public let screenKey = "memberships-crud"
     public let resource = "memberships"
 
     private let crud = BaseCrudContract(
-        screenKey: "memberships:crud",
+        screenKey: "memberships-crud",
         resource: "memberships",
         apiPrefix: "admin:",
         basePath: "/api/v1/memberships"

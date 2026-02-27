@@ -2,7 +2,7 @@ import EduCore
 
 /// Contrato para la lista de evaluaciones de un material.
 public struct AssessmentsListContract: ScreenContract {
-    public let screenKey = "assessments:list"
+    public let screenKey = "assessments-list"
     public let resource = "assessments"
 
     public init() {}

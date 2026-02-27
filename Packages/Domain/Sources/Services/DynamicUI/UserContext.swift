@@ -33,6 +33,14 @@ public struct ScreenUserContext: Sendable {
         self.permissions = dto.permissions
     }
 
+    /// Crea un `ScreenUserContext` a partir de un `AuthContext`.
+    public init(auth: AuthContext) {
+        self.roleId = auth.roleId
+        self.roleName = auth.roleName
+        self.schoolId = auth.schoolId
+        self.permissions = auth.permissions
+    }
+
     /// Verifica si el usuario tiene un permiso especifico.
     public func hasPermission(_ permission: String) -> Bool {
         permissions.contains(permission)

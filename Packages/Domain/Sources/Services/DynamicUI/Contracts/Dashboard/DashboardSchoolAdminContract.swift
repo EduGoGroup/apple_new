@@ -1,10 +1,10 @@
 /// Contrato para el dashboard de school admin.
 public struct DashboardSchoolAdminContract: ScreenContract {
-    public let screenKey = "dashboard:school_admin"
+    public let screenKey = "dashboard-schooladmin"
     public let resource = "dashboard"
 
     private let base = BaseDashboardContract(
-        screenKey: "dashboard:school_admin",
+        screenKey: "dashboard-schooladmin",
         apiPrefix: "admin:"
     )
 

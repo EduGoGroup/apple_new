@@ -1,10 +1,10 @@
 /// Contrato para la lista de roles.
 public struct RolesListContract: ScreenContract {
-    public let screenKey = "roles:list"
+    public let screenKey = "roles-list"
     public let resource = "roles"
 
     private let crud = BaseCrudContract(
-        screenKey: "roles:list",
+        screenKey: "roles-list",
         resource: "roles",
         apiPrefix: "iam:",
         basePath: "/api/v1/roles"

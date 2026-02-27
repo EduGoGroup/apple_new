@@ -1,10 +1,10 @@
 /// Contrato para el CRUD individual de unidad academica.
 public struct UnitCrudContract: ScreenContract {
-    public let screenKey = "units:crud"
+    public let screenKey = "units-crud"
     public let resource = "units"
 
     private let crud = BaseCrudContract(
-        screenKey: "units:crud",
+        screenKey: "units-crud",
         resource: "units",
         apiPrefix: "admin:",
         basePath: "/api/v1/units"

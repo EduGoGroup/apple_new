@@ -1,10 +1,10 @@
 /// Contrato para la lista de permisos.
 public struct PermissionsListContract: ScreenContract {
-    public let screenKey = "permissions:list"
+    public let screenKey = "permissions-list"
     public let resource = "permissions"
 
     private let crud = BaseCrudContract(
-        screenKey: "permissions:list",
+        screenKey: "permissions-list",
         resource: "permissions",
         apiPrefix: "iam:",
         basePath: "/api/v1/permissions"

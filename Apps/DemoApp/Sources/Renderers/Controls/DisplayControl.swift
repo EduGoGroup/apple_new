@@ -37,9 +37,18 @@ struct LabelControl: View {
 
 struct IconControl: View {
     let slot: Slot
+    var resolvedValue: JSONValue? = nil
+
+    private var iconName: String {
+        // Prioridad: resolvedValue (del field binding) → slot.icon → fallback
+        if let resolved = resolvedValue?.stringRepresentation, !resolved.isEmpty {
+            return resolved
+        }
+        return slot.icon ?? "questionmark"
+    }
 
     var body: some View {
-        Image(systemName: SlotRenderer.sfSymbolName(for: slot.icon ?? "questionmark"))
+        Image(systemName: SlotRenderer.sfSymbolName(for: iconName))
             .font(iconFont)
             .foregroundStyle(iconColor)
     }

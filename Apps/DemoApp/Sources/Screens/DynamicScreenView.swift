@@ -3,6 +3,7 @@ import EduDynamicUI
 import EduPresentation
 import EduModels
 import EduNetwork
+import EduDomain
 
 struct DynamicScreenView: View {
     let screenKey: String
@@ -14,15 +15,18 @@ struct DynamicScreenView: View {
         screenLoader: ScreenLoader,
         dataLoader: DataLoader,
         networkClient: NetworkClient,
+        orchestrator: EventOrchestrator? = nil,
+        userContext: ScreenUserContext = .anonymous,
         onLogout: (() -> Void)? = nil
     ) {
         self.screenKey = screenKey
-        self._viewModel = State(
-            initialValue: DynamicScreenViewModel(
-                screenLoader: screenLoader,
-                dataLoader: dataLoader
-            )
+        let vm = DynamicScreenViewModel(
+            screenLoader: screenLoader,
+            dataLoader: dataLoader,
+            orchestrator: orchestrator
         )
+        vm.userContext = userContext
+        self._viewModel = State(initialValue: vm)
         self.onLogout = onLogout
     }
 
