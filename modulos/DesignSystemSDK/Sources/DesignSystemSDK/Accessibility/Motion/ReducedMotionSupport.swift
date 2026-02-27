@@ -130,12 +130,10 @@ private struct AccessibilityReduceMotionModifier: ViewModifier {
         content
             .environment(\.accessibilityReduceMotion, isReduceMotionEnabled)
             .onAppear {
-                Task { @MainActor in
-                    isReduceMotionEnabled = ReducedMotionSupport.isEnabled
-                }
+                isReduceMotionEnabled = ReducedMotionSupport.isEnabled
             }
-            .onReceive(NotificationCenter.default.publisher(for: reduceMotionNotificationName)) { _ in
-                Task { @MainActor in
+            .task {
+                for await _ in NotificationCenter.default.notifications(named: reduceMotionNotificationName) {
                     isReduceMotionEnabled = ReducedMotionSupport.isEnabled
                 }
             }

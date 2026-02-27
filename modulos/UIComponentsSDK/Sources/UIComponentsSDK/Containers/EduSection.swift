@@ -7,7 +7,6 @@ import SwiftUI
 /// - Dividers configurables
 /// - Contenido colapsable
 /// - Adaptación por plataforma
-@MainActor
 public struct EduSection<Header: View, Content: View, Footer: View>: View {
     // MARK: - Properties
 
@@ -146,7 +145,6 @@ extension EduSection where Header == EmptyView, Footer == EmptyView {
 // MARK: - Standard Header/Footer Views
 
 /// Header estándar para secciones.
-@MainActor
 public struct EduSectionHeader: View {
     private let title: String
     private let subtitle: String?
@@ -189,7 +187,6 @@ public struct EduSectionHeader: View {
 }
 
 /// Footer estándar para secciones.
-@MainActor
 public struct EduSectionFooter: View {
     private let text: String
 

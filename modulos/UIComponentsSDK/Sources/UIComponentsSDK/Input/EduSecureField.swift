@@ -96,7 +96,6 @@ import FormsSDK
 /// - SeeAlso: `Validators.password(minLength:requireUppercase:requireNumbers:requireSymbols:)`
 /// - SeeAlso: [OWASP Mobile Security Testing Guide](https://owasp.org/www-project-mobile-security-testing-guide/)
 /// - SeeAlso: [iOS Keychain Services](https://developer.apple.com/documentation/security/keychain_services)
-@MainActor
 public struct EduSecureField: View {
     // MARK: - Properties
 
@@ -316,7 +315,6 @@ public struct EduSecureField: View {
 
 // MARK: - Password Strength Indicator
 
-@MainActor
 private struct PasswordStrengthIndicator: View {
     let password: String
 

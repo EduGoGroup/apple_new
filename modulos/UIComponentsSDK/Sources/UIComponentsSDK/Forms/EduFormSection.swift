@@ -10,7 +10,6 @@ import SwiftUI
 /// Provides consistent section styling for forms with
 /// optional title and footer text.
 @available(iOS 26.0, macOS 26.0, *)
-@MainActor
 public struct EduFormSection<Content: View>: View {
     public let title: String?
     public let footer: String?

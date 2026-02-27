@@ -11,7 +11,6 @@ import FormsSDK
 /// - Helper text y error messages
 /// - Integración con FormState y ValidationFieldModifier
 /// - Soporte para iOS y macOS
-@MainActor
 public struct EduTextField: View {
     // MARK: - Properties
 

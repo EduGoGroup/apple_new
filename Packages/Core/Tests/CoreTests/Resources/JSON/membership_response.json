@@ -1,0 +1,11 @@
+{
+    "id": "990e8400-e29b-41d4-a716-446655440004",
+    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+    "unit_id": "770e8400-e29b-41d4-a716-446655440002",
+    "role": "teacher",
+    "is_active": true,
+    "enrolled_at": "2024-01-15T08:00:00Z",
+    "withdrawn_at": null,
+    "created_at": "2024-01-15T08:00:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+}

@@ -1,13 +1,12 @@
-// swift-tools-version: 6.0
-// The swift-tools-version declares the minimum version of Swift Package Manager required to build this package.
+// swift-tools-version: 6.2
 
 import PackageDescription
 
 let package = Package(
     name: "FoundationToolkit",
     platforms: [
-        .iOS(.v18),
-        .macOS(.v15)
+        .iOS(.v26),
+        .macOS(.v26)
     ],
     products: [
         .library(
@@ -18,18 +17,12 @@ let package = Package(
     targets: [
         .target(
             name: "FoundationToolkit",
-            path: "Sources/FoundationToolkit",
-            swiftSettings: [
-                .swiftLanguageMode(.v6)
-            ]
+            path: "Sources/FoundationToolkit"
         ),
         .testTarget(
             name: "FoundationToolkitTests",
             dependencies: ["FoundationToolkit"],
-            path: "Tests/FoundationToolkitTests",
-            swiftSettings: [
-                .swiftLanguageMode(.v6)
-            ]
+            path: "Tests/FoundationToolkitTests"
         )
     ]
 )

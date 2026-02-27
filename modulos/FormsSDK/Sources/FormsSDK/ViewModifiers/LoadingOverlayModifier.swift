@@ -12,7 +12,6 @@ import SwiftUI
 /// }
 /// .loadingOverlay(isLoading: viewModel.isSubmitting, message: "Saving...")
 /// ```
-@MainActor
 public struct LoadingOverlayModifier: ViewModifier {
 
     /// Whether the loading overlay is active.
@@ -55,7 +54,7 @@ public struct LoadingOverlayModifier: ViewModifier {
 
     @ViewBuilder
     private var loadingView: some View {
-        VStack(spacing: style.contentSpacing) {
+        let container = VStack(spacing: style.contentSpacing) {
             ProgressView()
                 .scaleEffect(style.spinnerScale)
                 .tint(style.spinnerColor)
@@ -68,16 +67,29 @@ public struct LoadingOverlayModifier: ViewModifier {
             }
         }
         .padding(style.containerPadding)
-        .background(
-            RoundedRectangle(cornerRadius: style.containerCornerRadius)
-                .fill(style.containerBackground)
-        )
-        .shadow(
-            color: style.shadowColor,
-            radius: style.shadowRadius,
-            x: 0,
-            y: style.shadowY
-        )
+
+        if style.usesGlassEffect {
+            container
+                .glassEffect(.regular, in: .rect(cornerRadius: style.containerCornerRadius))
+                .shadow(
+                    color: style.shadowColor,
+                    radius: style.shadowRadius,
+                    x: 0,
+                    y: style.shadowY
+                )
+        } else {
+            container
+                .background(
+                    RoundedRectangle(cornerRadius: style.containerCornerRadius)
+                        .fill(style.containerBackground)
+                )
+                .shadow(
+                    color: style.shadowColor,
+                    radius: style.shadowRadius,
+                    x: 0,
+                    y: style.shadowY
+                )
+        }
     }
 }
 
@@ -110,7 +122,10 @@ public struct LoadingOverlayStyle: Sendable {
     /// Corner radius of the loading container.
     public let containerCornerRadius: CGFloat
 
-    /// Background style for the container.
+    /// Whether to use Liquid Glass effect for the container.
+    public let usesGlassEffect: Bool
+
+    /// Background style for the container (used only when `usesGlassEffect` is false).
     public let containerBackground: AnyShapeStyle
 
     /// Shadow color.
@@ -125,7 +140,7 @@ public struct LoadingOverlayStyle: Sendable {
     /// Animation duration for transitions.
     public let animationDuration: Double
 
-    /// Default loading overlay style.
+    /// Default loading overlay style with Liquid Glass.
     public static let `default` = LoadingOverlayStyle(
         blurRadius: 2,
         spinnerScale: 1.5,
@@ -135,7 +150,8 @@ public struct LoadingOverlayStyle: Sendable {
         messageColor: .secondary,
         containerPadding: 24,
         containerCornerRadius: 12,
-        containerBackground: AnyShapeStyle(.ultraThinMaterial),
+        usesGlassEffect: true,
+        containerBackground: AnyShapeStyle(Color.clear),
         shadowColor: .black.opacity(0.1),
         shadowRadius: 10,
         shadowY: 4,
@@ -152,6 +168,7 @@ public struct LoadingOverlayStyle: Sendable {
         messageColor: .primary,
         containerPadding: 0,
         containerCornerRadius: 0,
+        usesGlassEffect: false,
         containerBackground: AnyShapeStyle(Color.clear),
         shadowColor: .clear,
         shadowRadius: 0,
@@ -159,7 +176,7 @@ public struct LoadingOverlayStyle: Sendable {
         animationDuration: 0.3
     )
 
-    /// Themed style that uses semantic colors from the active theme.
+    /// Themed style with Liquid Glass and accent colors.
     @MainActor
     public static let themed = LoadingOverlayStyle(
         blurRadius: 2,
@@ -170,7 +187,8 @@ public struct LoadingOverlayStyle: Sendable {
         messageColor: .secondary,
         containerPadding: 24,
         containerCornerRadius: 12,
-        containerBackground: AnyShapeStyle(.ultraThinMaterial),
+        usesGlassEffect: true,
+        containerBackground: AnyShapeStyle(Color.clear),
         shadowColor: Color.black.opacity(0.12),
         shadowRadius: 10,
         shadowY: 4,
@@ -187,7 +205,8 @@ public struct LoadingOverlayStyle: Sendable {
         messageColor: Color,
         containerPadding: CGFloat,
         containerCornerRadius: CGFloat,
-        containerBackground: AnyShapeStyle,
+        usesGlassEffect: Bool = true,
+        containerBackground: AnyShapeStyle = AnyShapeStyle(Color.clear),
         shadowColor: Color,
         shadowRadius: CGFloat,
         shadowY: CGFloat,
@@ -201,6 +220,7 @@ public struct LoadingOverlayStyle: Sendable {
         self.messageColor = messageColor
         self.containerPadding = containerPadding
         self.containerCornerRadius = containerCornerRadius
+        self.usesGlassEffect = usesGlassEffect
         self.containerBackground = containerBackground
         self.shadowColor = shadowColor
         self.shadowRadius = shadowRadius

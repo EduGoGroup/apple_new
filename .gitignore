@@ -18,7 +18,6 @@ DerivedData/
 
 # Swift Package Manager
 .swiftpm/
-Packages/
 Package.pins
 Package.resolved
 *.xcodeproj

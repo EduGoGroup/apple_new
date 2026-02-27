@@ -10,7 +10,6 @@ import SwiftUI
 /// A prominent button for primary actions, with glass effects
 /// and liquid animations optimized for iOS 26+.
 @available(iOS 26.0, macOS 26.0, *)
-@MainActor
 public struct EduFloatingActionButton: View {
     public let icon: String
     public let label: String?
@@ -149,7 +148,6 @@ public struct EduFloatingActionButton: View {
 
 /// Helper container to position a FAB on screen
 @available(iOS 26.0, macOS 26.0, *)
-@MainActor
 public struct EduFABContainer<Content: View>: View {
     public let position: FABPosition
     @ViewBuilder public let content: () -> Content

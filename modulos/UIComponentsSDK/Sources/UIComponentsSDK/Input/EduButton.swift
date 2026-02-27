@@ -9,7 +9,6 @@ import DesignSystemSDK
 /// - Iconos opcionales (leading o trailing)
 /// - Adaptación automática por plataforma
 /// - Tamaños configurables
-@MainActor
 public struct EduButton: View {
     // MARK: - Types
 

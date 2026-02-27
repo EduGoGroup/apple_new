@@ -1,0 +1,16 @@
+{
+  "id": "770e8400-e29b-41d4-a716-446655440002",
+  "display_name": "5th Grade - Section A",
+  "code": "5A",
+  "description": "Fifth grade section A class",
+  "type": "section",
+  "school_id": "660e8400-e29b-41d4-a716-446655440001",
+  "parent_unit_id": "880e8400-e29b-41d4-a716-446655440003",
+  "metadata": {
+    "capacity": "30",
+    "room": "101"
+  },
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-15T10:30:00Z",
+  "deleted_at": null
+}

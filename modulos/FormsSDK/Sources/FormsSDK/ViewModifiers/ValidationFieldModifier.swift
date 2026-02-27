@@ -10,7 +10,6 @@ import SwiftUI
 /// TextField("Email", text: $viewModel.email)
 ///     .validated(viewModel.$email.validationState)
 /// ```
-@MainActor
 public struct ValidationFieldModifier: ViewModifier {
 
     /// The validation state to observe.

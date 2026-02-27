@@ -1,7 +1,6 @@
 import SwiftUI
 import DesignSystemSDK
 
-@MainActor
 public struct EduBanner: View {
     let message: String
     let style: ToastStyle

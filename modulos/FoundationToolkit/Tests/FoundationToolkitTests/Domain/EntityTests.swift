@@ -1,9 +1,9 @@
-import XCTest
+import Testing
 import Foundation
 @testable import FoundationToolkit
 
 /// Comprehensive test suite for the Entity protocol.
-final class EntityTests: XCTestCase {
+@Suite struct EntityTests {
 
     // MARK: - Constants
 
@@ -34,102 +34,102 @@ final class EntityTests: XCTestCase {
 
     // MARK: - Identifiable Tests
 
-    func testEntityHasStableID() {
+    @Test func testEntityHasStableID() {
         let id = UUID()
         let entity = MockEntity(id: id)
-        XCTAssertEqual(entity.id, id)
-        XCTAssertEqual(entity.id, entity.id)
+        #expect(entity.id == id)
+        #expect(entity.id == entity.id)
     }
 
-    func testDifferentEntitiesHaveUniqueIDs() {
+    @Test func testDifferentEntitiesHaveUniqueIDs() {
         let entity1 = MockEntity()
         let entity2 = MockEntity()
-        XCTAssertNotEqual(entity1.id, entity2.id)
+        #expect(entity1.id != entity2.id)
     }
 
-    func testIDIsUUIDType() {
+    @Test func testIDIsUUIDType() {
         let entity = MockEntity()
-        XCTAssertTrue(type(of: entity.id) == UUID.self)
+        #expect(type(of: entity.id) == UUID.self)
     }
 
     // MARK: - Equatable Tests
 
-    func testEntitiesWithSamePropertiesAreEqual() {
+    @Test func testEntitiesWithSamePropertiesAreEqual() {
         let id = UUID()
         let date = Date()
         let e1 = MockEntity(id: id, createdAt: date, updatedAt: date, name: "A")
         let e2 = MockEntity(id: id, createdAt: date, updatedAt: date, name: "A")
-        XCTAssertEqual(e1, e2)
+        #expect(e1 == e2)
     }
 
-    func testEntitiesWithDifferentIDsAreNotEqual() {
+    @Test func testEntitiesWithDifferentIDsAreNotEqual() {
         let date = Date()
         let e1 = MockEntity(id: UUID(), createdAt: date, updatedAt: date)
         let e2 = MockEntity(id: UUID(), createdAt: date, updatedAt: date)
-        XCTAssertNotEqual(e1, e2)
+        #expect(e1 != e2)
     }
 
-    func testEntitiesWithDifferentNamesAreNotEqual() {
+    @Test func testEntitiesWithDifferentNamesAreNotEqual() {
         let id = UUID()
         let date = Date()
         let e1 = MockEntity(id: id, createdAt: date, updatedAt: date, name: "A")
         let e2 = MockEntity(id: id, createdAt: date, updatedAt: date, name: "B")
-        XCTAssertNotEqual(e1, e2)
+        #expect(e1 != e2)
     }
 
-    func testEqualityIsReflexive() {
+    @Test func testEqualityIsReflexive() {
         let entity = MockEntity()
-        XCTAssertEqual(entity, entity)
+        #expect(entity == entity)
     }
 
-    func testEqualityIsSymmetric() {
+    @Test func testEqualityIsSymmetric() {
         let id = UUID()
         let date = Date()
         let e1 = MockEntity(id: id, createdAt: date, updatedAt: date)
         let e2 = MockEntity(id: id, createdAt: date, updatedAt: date)
-        XCTAssertEqual(e1, e2)
-        XCTAssertEqual(e2, e1)
+        #expect(e1 == e2)
+        #expect(e2 == e1)
     }
 
     // MARK: - Date Tests
 
-    func testEntityHasTimestamps() {
+    @Test func testEntityHasTimestamps() {
         let created = Date()
         let updated = Date()
         let entity = MockEntity(createdAt: created, updatedAt: updated)
-        XCTAssertEqual(entity.createdAt, created)
-        XCTAssertEqual(entity.updatedAt, updated)
+        #expect(entity.createdAt == created)
+        #expect(entity.updatedAt == updated)
     }
 
-    func testCreatedAtCanBePastDate() {
+    @Test func testCreatedAtCanBePastDate() {
         let pastDate = Date(timeIntervalSince1970: 0)
         let entity = MockEntity(createdAt: pastDate)
-        XCTAssertEqual(entity.createdAt, pastDate)
+        #expect(entity.createdAt == pastDate)
     }
 
-    func testUpdatedAtCanBeFutureDate() {
+    @Test func testUpdatedAtCanBeFutureDate() {
         let futureDate = Date(timeIntervalSinceNow: 86400 * 365)
         let entity = MockEntity(updatedAt: futureDate)
-        XCTAssertEqual(entity.updatedAt, futureDate)
+        #expect(entity.updatedAt == futureDate)
     }
 
     // MARK: - Sendable Tests (Concurrency)
 
-    func testEntityCanBeSentToActor() async {
+    @Test func testEntityCanBeSentToActor() async {
         let entity = MockEntity(name: "Concurrent")
         let store = EntityStore()
         await store.store(entity)
         let retrieved = await store.retrieve(id: entity.id)
-        XCTAssertEqual(retrieved, entity)
+        #expect(retrieved == entity)
     }
 
-    func testEntityCanBeUsedInTask() async {
+    @Test func testEntityCanBeUsedInTask() async {
         let entity = MockEntity(name: "Task")
         let result = await Task { entity }.value
-        XCTAssertEqual(result, entity)
+        #expect(result == entity)
     }
 
-    func testMultipleEntitiesProcessedConcurrently() async {
+    @Test func testMultipleEntitiesProcessedConcurrently() async {
         let entities = (0..<Self.concurrentEntityCount).map { MockEntity(name: "E\($0)") }
         let store = EntityStore()
 
@@ -140,33 +140,33 @@ final class EntityTests: XCTestCase {
         }
 
         let count = await store.count()
-        XCTAssertEqual(count, Self.concurrentEntityCount)
+        #expect(count == Self.concurrentEntityCount)
     }
 
-    func testEntityCanBeSharedBetweenTasks() async throws {
+    @Test func testEntityCanBeSharedBetweenTasks() async throws {
         let entity = MockEntity(name: "Shared")
 
         async let task1 = Task { entity.id }.value
         async let task2 = Task { entity.name }.value
 
         let (id, name) = try await (task1, task2)
-        XCTAssertEqual(id, entity.id)
-        XCTAssertEqual(name, entity.name)
+        #expect(id == entity.id)
+        #expect(name == entity.name)
     }
 
     // MARK: - Protocol Conformance
 
-    func testEntityConformsToIdentifiable() {
+    @Test func testEntityConformsToIdentifiable() {
         let entity = MockEntity()
-        XCTAssertTrue(entity is any Identifiable)
+        #expect(entity is any Identifiable)
     }
 
-    func testEntityConformsToEquatable() {
+    @Test func testEntityConformsToEquatable() {
         let entity = MockEntity()
-        XCTAssertTrue(entity is any Equatable)
+        #expect(entity is any Equatable)
     }
 
-    func testEntityConformsToSendable() {
+    @Test func testEntityConformsToSendable() {
         func requiresSendable<T: Sendable>(_ value: T) {}
         let entity = MockEntity()
         requiresSendable(entity)
@@ -174,35 +174,35 @@ final class EntityTests: XCTestCase {
 
     // MARK: - Edge Cases
 
-    func testEntityWithMinUUID() throws {
-        let minUUID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000000"))
+    @Test func testEntityWithMinUUID() throws {
+        let minUUID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000000"))
         let entity = MockEntity(id: minUUID)
-        XCTAssertEqual(entity.id, minUUID)
+        #expect(entity.id == minUUID)
     }
 
-    func testEntityWithMaxUUID() throws {
-        let maxUUID = try XCTUnwrap(UUID(uuidString: "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"))
+    @Test func testEntityWithMaxUUID() throws {
+        let maxUUID = try #require(UUID(uuidString: "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"))
         let entity = MockEntity(id: maxUUID)
-        XCTAssertEqual(entity.id, maxUUID)
+        #expect(entity.id == maxUUID)
     }
 
-    func testEntityInCollection() {
+    @Test func testEntityInCollection() {
         let entities = [MockEntity(), MockEntity(), MockEntity()]
         let ids = entities.map(\.id)
-        XCTAssertEqual(Set(ids).count, 3)
+        #expect(Set(ids).count == 3)
     }
 
-    func testEntityInDictionary() {
+    @Test func testEntityInDictionary() {
         let e1 = MockEntity(name: "E1")
         let e2 = MockEntity(name: "E2")
         var dict: [UUID: MockEntity] = [:]
         dict[e1.id] = e1
         dict[e2.id] = e2
-        XCTAssertEqual(dict.count, 2)
-        XCTAssertEqual(dict[e1.id], e1)
+        #expect(dict.count == 2)
+        #expect(dict[e1.id] == e1)
     }
 
-    func testEntityCanBeFiltered() {
+    @Test func testEntityCanBeFiltered() {
         let now = Date()
         let pastDate = Date(timeIntervalSince1970: 0)
         let entities = [
@@ -211,6 +211,6 @@ final class EntityTests: XCTestCase {
             MockEntity(createdAt: now, name: "Also Recent")
         ]
         let recentEntities = entities.filter { $0.createdAt > pastDate }
-        XCTAssertEqual(recentEntities.count, 2)
+        #expect(recentEntities.count == 2)
     }
 }
