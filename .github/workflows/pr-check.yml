@@ -1,16 +1,21 @@
-name: PR Check
+name: Build & Test
 
+# On-demand only — Xcode 26 / Swift 6.2 not yet available on GitHub runners
+# Change to pull_request trigger when runner support is available
 on:
-  pull_request:
-    branches: [main, dev]
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: 'Run tests after build'
+        required: false
+        default: true
+        type: boolean
 
-# Cancel previous runs for the same PR
 concurrency:
-  group: pr-${{ github.event.pull_request.number }}
+  group: build-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  # Adjust if the runner has a different Xcode 26 path
   XCODE_PATH: /Applications/Xcode_26.app/Contents/Developer
 
 jobs:
@@ -28,7 +33,8 @@ jobs:
           else
             echo "Available Xcode versions:"
             ls /Applications/ | grep Xcode
-            echo "::warning::Xcode 26 not found, using default"
+            echo "::error::Xcode 26 not found on this runner"
+            exit 1
           fi
           swift --version
 
@@ -39,6 +45,7 @@ jobs:
     name: Test ${{ matrix.package }}
     runs-on: macos-15
     needs: build
+    if: inputs.run_tests == true
     timeout-minutes: 10
     strategy:
       fail-fast: false
@@ -52,7 +59,8 @@ jobs:
           if [ -d "$XCODE_PATH" ]; then
             sudo xcode-select -s "$XCODE_PATH"
           else
-            echo "::warning::Xcode 26 not found, using default"
+            echo "::error::Xcode 26 not found on this runner"
+            exit 1
           fi
 
       - name: Test ${{ matrix.package }}
