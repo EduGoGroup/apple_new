@@ -7,7 +7,6 @@ import SwiftUI
 /// - Label customizable
 /// - Contenido genérico
 /// - Semantic colors para theming
-@MainActor
 public struct EduGroupBox<Label: View, Content: View>: View {
     // MARK: - Properties
 
@@ -135,7 +134,6 @@ extension Color {
 // MARK: - Standard Labels
 
 /// Label estándar para GroupBox con icono.
-@MainActor
 public struct EduGroupBoxLabel: View {
     private let title: String
     private let icon: String?

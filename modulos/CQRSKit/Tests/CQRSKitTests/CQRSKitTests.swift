@@ -1,4 +1,4 @@
-import XCTest
+import Testing
 import Foundation
 @testable import CQRSKit
 
@@ -60,52 +60,52 @@ actor TestSubscriber: EventSubscriber {
 
 // MARK: - CQRS Core Tests
 
-final class CommandTests: XCTestCase {
+@Suite struct CommandTests {
 
-    func testCommandHasAssociatedResultType() {
+    @Test func testCommandHasAssociatedResultType() {
         let command = TestCommand(value: "test")
-        XCTAssertEqual(command.value, "test")
+        #expect(command.value == "test")
     }
 
-    func testCommandConformsToSendable() {
+    @Test func testCommandConformsToSendable() {
         let command: any Sendable = TestCommand(value: "test")
-        XCTAssertTrue(command is TestCommand)
+        #expect(command is TestCommand)
     }
 }
 
-final class QueryTests: XCTestCase {
+@Suite struct QueryTests {
 
-    func testQueryHasAssociatedResultType() {
+    @Test func testQueryHasAssociatedResultType() {
         let query = TestQuery(filter: "active")
-        XCTAssertEqual(query.filter, "active")
+        #expect(query.filter == "active")
     }
 }
 
-final class DomainEventTests: XCTestCase {
+@Suite struct DomainEventTests {
 
-    func testEventProperties() {
+    @Test func testEventProperties() {
         let event = TestEvent(message: "Hello")
-        XCTAssertEqual(event.message, "Hello")
-        XCTAssertNotNil(event.eventId)
-        XCTAssertNotNil(event.occurredAt)
+        #expect(event.message == "Hello")
+        #expect(event.eventId != nil)
+        #expect(event.occurredAt != nil)
     }
 
-    func testEventTypeDefaultsToTypeName() {
+    @Test func testEventTypeDefaultsToTypeName() {
         let event = TestEvent(message: "Hello")
-        XCTAssertEqual(event.eventType, "TestEvent")
+        #expect(event.eventType == "TestEvent")
     }
 
-    func testEventMetadataDefaultsToEmpty() {
+    @Test func testEventMetadataDefaultsToEmpty() {
         let event = TestEvent(message: "Hello")
-        XCTAssertTrue(event.metadata.isEmpty)
+        #expect(event.metadata.isEmpty)
     }
 }
 
 // MARK: - Event Bus Tests
 
-final class EventBusTests: XCTestCase {
+@Suite struct EventBusTests {
 
-    func testSubscribeAndPublishWithSubscriber() async {
+    @Test func testSubscribeAndPublishWithSubscriber() async {
         let bus = EventBus(loggingEnabled: false, metricsEnabled: false)
         let subscriber = TestSubscriber()
 
@@ -114,34 +114,34 @@ final class EventBusTests: XCTestCase {
         try? await Task.sleep(for: .milliseconds(50))
 
         let count = await subscriber.receivedEvents.count
-        XCTAssertEqual(count, 1)
+        #expect(count == 1)
     }
 
-    func testUnsubscribe() async {
+    @Test func testUnsubscribe() async {
         let bus = EventBus(loggingEnabled: false, metricsEnabled: false)
         let subscriber = TestSubscriber()
 
         let subId = await bus.subscribe(subscriber)
         let removed = await bus.unsubscribe(subId)
-        XCTAssertTrue(removed)
+        #expect(removed)
 
         await bus.publish(TestEvent(message: "test"))
         try? await Task.sleep(for: .milliseconds(50))
 
         let count = await subscriber.receivedEvents.count
-        XCTAssertEqual(count, 0)
+        #expect(count == 0)
     }
 
-    func testSubscriberCountForEventType() async {
+    @Test func testSubscriberCountForEventType() async {
         let bus = EventBus(loggingEnabled: false, metricsEnabled: false)
         let subscriber = TestSubscriber()
         await bus.subscribe(subscriber)
 
         let count = await bus.subscriberCount(for: TestEvent.self)
-        XCTAssertEqual(count, 1)
+        #expect(count == 1)
     }
 
-    func testTotalSubscriptions() async {
+    @Test func testTotalSubscriptions() async {
         let bus = EventBus(loggingEnabled: false, metricsEnabled: false)
         let sub1 = TestSubscriber()
         let sub2 = TestSubscriber()
@@ -149,21 +149,21 @@ final class EventBusTests: XCTestCase {
         await bus.subscribe(sub2)
 
         let total = await bus.totalSubscriptions
-        XCTAssertEqual(total, 2)
+        #expect(total == 2)
     }
 }
 
 // MARK: - Mediator Tests
 
-final class MediatorErrorTests: XCTestCase {
+@Suite struct MediatorErrorTests {
 
-    func testHandlerNotFoundHasDescription() {
+    @Test func testHandlerNotFoundHasDescription() {
         let error = MediatorError.handlerNotFound(type: "TestCommand")
-        XCTAssertNotNil(error.errorDescription)
-        XCTAssertTrue(error.description.contains("TestCommand"))
+        #expect(error.errorDescription != nil)
+        #expect(error.description.contains("TestCommand"))
     }
 
-    func testAllCases() {
+    @Test func testAllCases() {
         let errors: [MediatorError] = [
             .handlerNotFound(type: "Test"),
             .executionError(message: "Failed", underlyingError: nil),
@@ -172,221 +172,221 @@ final class MediatorErrorTests: XCTestCase {
         ]
 
         for error in errors {
-            XCTAssertNotNil(error.errorDescription)
+            #expect(error.errorDescription != nil)
         }
     }
 }
 
 // MARK: - State Management Tests
 
-final class StatePublisherTests: XCTestCase {
+@Suite struct StatePublisherTests {
 
-    func testStartsWithNilState() async {
+    @Test func testStartsWithNilState() async {
         let publisher = StatePublisher<TestState>()
         let state = await publisher.currentState
-        XCTAssertNil(state)
+        #expect(state == nil)
     }
 
-    func testEmitsUpdates() async {
+    @Test func testEmitsUpdates() async {
         let publisher = StatePublisher<TestState>()
         await publisher.send(TestState(count: 42))
         let state = await publisher.currentState
-        XCTAssertEqual(state?.count, 42)
+        #expect(state?.count == 42)
     }
 
-    func testSendIfChangedDeduplicates() async {
+    @Test func testSendIfChangedDeduplicates() async {
         let publisher = StatePublisher<TestState>()
         await publisher.send(TestState(count: 1))
         let changed = await publisher.sendIfChanged(TestState(count: 1))
-        XCTAssertFalse(changed)
+        #expect(!changed)
 
         let changed2 = await publisher.sendIfChanged(TestState(count: 2))
-        XCTAssertTrue(changed2)
+        #expect(changed2)
     }
 
-    func testFinishStopsEmissions() async {
+    @Test func testFinishStopsEmissions() async {
         let publisher = StatePublisher<TestState>()
         await publisher.send(TestState(count: 1))
         await publisher.finish()
         await publisher.send(TestState(count: 99))
         let state = await publisher.currentState
-        XCTAssertEqual(state?.count, 1)
+        #expect(state?.count == 1)
     }
 }
 
-final class BufferingStrategyTests: XCTestCase {
+@Suite struct BufferingStrategyTests {
 
-    func testUnboundedBufferAcceptsElements() async {
+    @Test func testUnboundedBufferAcceptsElements() async {
         let buffer = UnboundedBuffer<Int>()
         await buffer.enqueue(1)
         await buffer.enqueue(2)
         let value = await buffer.dequeue()
-        XCTAssertEqual(value, 1)
+        #expect(value == 1)
     }
 
-    func testUnboundedBufferIsNeverFull() async {
+    @Test func testUnboundedBufferIsNeverFull() async {
         let buffer = UnboundedBuffer<Int>()
         let isFull = await buffer.isFull
-        XCTAssertFalse(isFull)
+        #expect(!isFull)
     }
 
-    func testBoundedBufferRespectsCapacity() async {
+    @Test func testBoundedBufferRespectsCapacity() async {
         let buffer = BoundedBuffer<Int>(capacity: 2)
         await buffer.enqueue(1)
         await buffer.enqueue(2)
         let value = await buffer.dequeue()
-        XCTAssertEqual(value, 1)
+        #expect(value == 1)
     }
 
-    func testDroppingBufferDropsOldestWhenFull() async {
+    @Test func testDroppingBufferDropsOldestWhenFull() async {
         let buffer = DroppingBuffer<Int>(capacity: 2)
         await buffer.enqueue(1)
         await buffer.enqueue(2)
         await buffer.enqueue(3)
         let value = await buffer.dequeue()
-        XCTAssertEqual(value, 2)
+        #expect(value == 2)
     }
 
-    func testBufferClear() async {
+    @Test func testBufferClear() async {
         let buffer = UnboundedBuffer<Int>()
         await buffer.enqueue(1)
         await buffer.enqueue(2)
         await buffer.clear()
         let isEmpty = await buffer.isEmpty
-        XCTAssertTrue(isEmpty)
+        #expect(isEmpty)
     }
 }
 
 // MARK: - Metrics Tests
 
-final class CQRSMetricsTests: XCTestCase {
+@Suite struct CQRSMetricsTests {
 
-    func testCanRecordAndRetrieveErrors() async {
+    @Test func testCanRecordAndRetrieveErrors() async {
         let metrics = CQRSMetrics()
         let count = await metrics.getErrorCount(for: "TestHandler")
-        XCTAssertEqual(count, 0)
+        #expect(count == 0)
     }
 
-    func testGeneratesReport() async {
+    @Test func testGeneratesReport() async {
         let metrics = CQRSMetrics()
         let report = await metrics.generateReport()
-        XCTAssertTrue(report.queryStats.isEmpty)
-        XCTAssertTrue(report.commandStats.isEmpty)
+        #expect(report.queryStats.isEmpty)
+        #expect(report.commandStats.isEmpty)
     }
 
-    func testRecordCacheHitAndMiss() async {
+    @Test func testRecordCacheHitAndMiss() async {
         let metrics = CQRSMetrics()
         await metrics.recordCacheHit(queryType: "TestQuery")
         await metrics.recordCacheMiss(queryType: "TestQuery")
         let cacheMetrics = await metrics.getCacheMetrics(for: "TestQuery")
-        XCTAssertNotNil(cacheMetrics)
-        XCTAssertEqual(cacheMetrics?.hits, 1)
-        XCTAssertEqual(cacheMetrics?.misses, 1)
+        #expect(cacheMetrics != nil)
+        #expect(cacheMetrics?.hits == 1)
+        #expect(cacheMetrics?.misses == 1)
     }
 }
 
-final class CacheMetricsTests: XCTestCase {
+@Suite struct CacheMetricsTests {
 
-    func testTracksHitsAndMisses() {
+    @Test func testTracksHitsAndMisses() {
         var metrics = CacheMetrics(handlerType: "TestQuery")
         metrics.recordHit()
         metrics.recordMiss()
-        XCTAssertEqual(metrics.hits, 1)
-        XCTAssertEqual(metrics.misses, 1)
-        XCTAssertEqual(metrics.totalAccesses, 2)
+        #expect(metrics.hits == 1)
+        #expect(metrics.misses == 1)
+        #expect(metrics.totalAccesses == 2)
     }
 
-    func testHitRatio() {
+    @Test func testHitRatio() {
         var metrics = CacheMetrics(handlerType: "TestQuery")
         metrics.recordHit()
         metrics.recordHit()
         metrics.recordMiss()
-        XCTAssertGreaterThan(metrics.hitRatio, 0.6)
-        XCTAssertLessThan(metrics.hitRatio, 0.7)
+        #expect(metrics.hitRatio > 0.6)
+        #expect(metrics.hitRatio < 0.7)
     }
 
-    func testReset() {
+    @Test func testReset() {
         var metrics = CacheMetrics(handlerType: "TestQuery")
         metrics.recordHit()
         metrics.recordMiss()
         metrics.reset()
-        XCTAssertEqual(metrics.hits, 0)
-        XCTAssertEqual(metrics.misses, 0)
+        #expect(metrics.hits == 0)
+        #expect(metrics.misses == 0)
     }
 }
 
 // MARK: - ReadModelStore Tests
 
-final class ReadModelStoreTests: XCTestCase {
+@Suite struct ReadModelStoreTests {
 
-    func testSaveAndGet() async {
+    @Test func testSaveAndGet() async {
         let store = ReadModelStore<TestReadModel>(loggingEnabled: false)
         let model = TestReadModel(id: "1", name: "Test")
         await store.save(model)
         let retrieved = await store.get(id: "1")
-        XCTAssertEqual(retrieved?.name, "Test")
+        #expect(retrieved?.name == "Test")
     }
 
-    func testReturnsNilForMissingKeys() async {
+    @Test func testReturnsNilForMissingKeys() async {
         let store = ReadModelStore<TestReadModel>(loggingEnabled: false)
         let value = await store.get(id: "missing")
-        XCTAssertNil(value)
+        #expect(value == nil)
     }
 
-    func testCanInvalidate() async {
+    @Test func testCanInvalidate() async {
         let store = ReadModelStore<TestReadModel>(loggingEnabled: false)
         let model = TestReadModel(id: "1", name: "Test")
         await store.save(model)
         let removed = await store.invalidate(id: "1")
-        XCTAssertTrue(removed)
+        #expect(removed)
         let value = await store.get(id: "1")
-        XCTAssertNil(value)
+        #expect(value == nil)
     }
 
-    func testTracksCount() async {
+    @Test func testTracksCount() async {
         let store = ReadModelStore<TestReadModel>(loggingEnabled: false)
         await store.save(TestReadModel(id: "1", name: "A"))
         await store.save(TestReadModel(id: "2", name: "B"))
         let count = await store.count
-        XCTAssertEqual(count, 2)
+        #expect(count == 2)
     }
 
-    func testInvalidateByTag() async {
+    @Test func testInvalidateByTag() async {
         let store = ReadModelStore<TestReadModel>(loggingEnabled: false)
         await store.save(TestReadModel(id: "1", name: "A", tags: ["group1"]))
         await store.save(TestReadModel(id: "2", name: "B", tags: ["group1"]))
         await store.save(TestReadModel(id: "3", name: "C", tags: ["group2"]))
         let removed = await store.invalidateByTag("group1")
-        XCTAssertEqual(removed, 2)
+        #expect(removed == 2)
         let count = await store.count
-        XCTAssertEqual(count, 1)
+        #expect(count == 1)
     }
 
-    func testInvalidateAll() async {
+    @Test func testInvalidateAll() async {
         let store = ReadModelStore<TestReadModel>(loggingEnabled: false)
         await store.save(TestReadModel(id: "1", name: "A"))
         await store.save(TestReadModel(id: "2", name: "B"))
         await store.invalidateAll()
         let count = await store.count
-        XCTAssertEqual(count, 0)
+        #expect(count == 0)
     }
 }
 
 // MARK: - AnyDomainEvent Tests
 
-final class AnyDomainEventTests: XCTestCase {
+@Suite struct AnyDomainEventTests {
 
-    func testWrapsAndUnwraps() {
+    @Test func testWrapsAndUnwraps() {
         let original = TestEvent(message: "wrapped")
         let any = AnyDomainEvent(original)
-        XCTAssertEqual(any.eventType, "TestEvent")
+        #expect(any.eventType == "TestEvent")
 
         let unwrapped = any.unwrap(as: TestEvent.self)
-        XCTAssertNotNil(unwrapped)
-        XCTAssertEqual(unwrapped?.message, "wrapped")
+        #expect(unwrapped != nil)
+        #expect(unwrapped?.message == "wrapped")
     }
 
-    func testUnwrapReturnsNilForWrongType() {
+    @Test func testUnwrapReturnsNilForWrongType() {
         let event = TestEvent(message: "test")
         let any = AnyDomainEvent(event)
         // Use a different DomainEvent type to test wrong type unwrap
@@ -395,6 +395,6 @@ final class AnyDomainEventTests: XCTestCase {
             let occurredAt = Date()
         }
         let wrong = any.unwrap(as: OtherEvent.self)
-        XCTAssertNil(wrong)
+        #expect(wrong == nil)
     }
 }

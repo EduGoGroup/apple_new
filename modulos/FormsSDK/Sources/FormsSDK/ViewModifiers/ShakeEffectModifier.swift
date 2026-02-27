@@ -10,7 +10,6 @@ import SwiftUI
 /// TextField("Email", text: $email)
 ///     .shakeOnError(trigger: validationFailed)
 /// ```
-@MainActor
 public struct ShakeEffectModifier: ViewModifier {
 
     /// Whether to trigger the shake animation.
@@ -48,7 +47,7 @@ public struct ShakeEffectModifier: ViewModifier {
         let animation = Animation
             .linear(duration: style.shakeDuration / Double(style.shakeCount * 2))
 
-        Task { @MainActor in
+        Task {
             for _ in 0..<style.shakeCount {
                 withAnimation(animation) {
                     shakeOffset = style.shakeAmplitude

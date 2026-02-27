@@ -9,7 +9,6 @@ import DesignSystemSDK
 /// - Icono de búsqueda
 /// - Estados: normal, searching, disabled
 /// - Feedback visual durante búsqueda
-@MainActor
 public struct EduSearchField: View {
     // MARK: - Properties
 

@@ -9,7 +9,6 @@ import SwiftUI
 /// - Contenido genérico
 /// - Estados: normal, highlighted, disabled
 /// - Semantic colors para theming
-@MainActor
 public struct EduCard<Content: View>: View {
     // MARK: - Types
 
@@ -186,7 +185,6 @@ extension Color {
 // MARK: - Specialized Cards
 
 /// Card hero para contenido destacado.
-@MainActor
 public struct EduHeroCard<Content: View>: View {
     private let content: Content
     private let onTap: (() -> Void)?
@@ -207,7 +205,6 @@ public struct EduHeroCard<Content: View>: View {
 }
 
 /// Card para elementos de lista.
-@MainActor
 public struct EduListCard<Content: View>: View {
     private let content: Content
     private let onTap: (() -> Void)?

@@ -1,0 +1,25 @@
+{
+  "progress_request": {
+    "material_id": "550e8400-e29b-41d4-a716-446655440001",
+    "user_id": "550e8400-e29b-41d4-a716-446655440099",
+    "percentage": 75
+  },
+  "progress_response": {
+    "user_id": "550e8400-e29b-41d4-a716-446655440099",
+    "material_id": "550e8400-e29b-41d4-a716-446655440001",
+    "percentage": 75,
+    "last_updated": "2026-01-28T15:30:00Z"
+  },
+  "progress_complete": {
+    "user_id": "550e8400-e29b-41d4-a716-446655440099",
+    "material_id": "550e8400-e29b-41d4-a716-446655440001",
+    "percentage": 100,
+    "last_updated": "2026-01-28T16:00:00Z"
+  },
+  "progress_zero": {
+    "user_id": "550e8400-e29b-41d4-a716-446655440099",
+    "material_id": "550e8400-e29b-41d4-a716-446655440002",
+    "percentage": 0,
+    "last_updated": "2026-01-28T10:00:00Z"
+  }
+}

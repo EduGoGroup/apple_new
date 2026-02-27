@@ -60,7 +60,6 @@ public struct EduNavigationBarItem: Sendable {
 // MARK: - Custom Navigation Bar
 
 /// Barra de navegación personalizada
-@MainActor
 public struct EduNavigationBar<Content: View>: View {
     private let title: String
     private let leadingItem: EduNavigationBarItem?
@@ -260,7 +259,6 @@ extension EduNavigationBarConfiguration.DisplayMode {
 
 #if os(iOS) || os(visionOS)
 /// Wrapper para NavigationStack con configuración
-@MainActor
 public struct EduNavigationStack<Content: View>: View {
     private let content: () -> Content
 

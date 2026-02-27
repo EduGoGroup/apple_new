@@ -10,7 +10,6 @@ import SwiftUI
 /// Provides a styled form container with glass effects
 /// and automatic background handling for iOS 26+.
 @available(iOS 26.0, macOS 26.0, *)
-@MainActor
 public struct EduForm<Content: View>: View {
     @ViewBuilder public let content: () -> Content
     public let onSubmit: () -> Void
@@ -33,7 +32,7 @@ public struct EduForm<Content: View>: View {
             content()
         }
         .scrollContentBackground(.hidden)
-        .background(.ultraThinMaterial)
+        .glassEffect(.regular)
         .onSubmit(onSubmit)
     }
 }

@@ -1,0 +1,67 @@
+name: Build & Test
+
+# On-demand only — Xcode 26 / Swift 6.2 not yet available on GitHub runners
+# Change to pull_request trigger when runner support is available
+on:
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: 'Run tests after build'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  XCODE_PATH: /Applications/Xcode_26.app/Contents/Developer
+
+jobs:
+  build:
+    name: Build
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          if [ -d "$XCODE_PATH" ]; then
+            sudo xcode-select -s "$XCODE_PATH"
+          else
+            echo "Available Xcode versions:"
+            ls /Applications/ | grep Xcode
+            echo "::error::Xcode 26 not found on this runner"
+            exit 1
+          fi
+          swift --version
+
+      - name: Build
+        run: make build
+
+  test:
+    name: Test ${{ matrix.package }}
+    runs-on: macos-15
+    needs: build
+    if: inputs.run_tests == true
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [Core, Infrastructure, Domain, DynamicUI]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          if [ -d "$XCODE_PATH" ]; then
+            sudo xcode-select -s "$XCODE_PATH"
+          else
+            echo "::error::Xcode 26 not found on this runner"
+            exit 1
+          fi
+
+      - name: Test ${{ matrix.package }}
+        run: cd Packages/${{ matrix.package }} && swift test

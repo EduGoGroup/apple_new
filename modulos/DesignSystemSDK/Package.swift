@@ -1,11 +1,11 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "DesignSystemSDK",
     platforms: [
-        .iOS(.v18),
-        .macOS(.v15)
+        .iOS(.v26),
+        .macOS(.v26)
     ],
     products: [
         .library(name: "DesignSystemSDK", targets: ["DesignSystemSDK"])
@@ -13,14 +13,12 @@ let package = Package(
     targets: [
         .target(
             name: "DesignSystemSDK",
-            path: "Sources/DesignSystemSDK",
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            path: "Sources/DesignSystemSDK"
         ),
         .testTarget(
             name: "DesignSystemSDKTests",
             dependencies: ["DesignSystemSDK"],
-            path: "Tests/DesignSystemSDKTests",
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            path: "Tests/DesignSystemSDKTests"
         )
     ]
 )

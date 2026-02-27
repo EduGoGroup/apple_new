@@ -1,0 +1,20 @@
+{
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "name": "Springfield Elementary",
+    "code": "SPR-001",
+    "is_active": true,
+    "address": "123 Education Lane",
+    "city": "Springfield",
+    "country": "CO",
+    "contact_email": "admin@springfield.edu",
+    "contact_phone": "+57 300 123 4567",
+    "max_students": 500,
+    "max_teachers": 50,
+    "subscription_tier": "premium",
+    "metadata": {
+        "founded": "1990",
+        "motto": "Learning is fun"
+    },
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+}

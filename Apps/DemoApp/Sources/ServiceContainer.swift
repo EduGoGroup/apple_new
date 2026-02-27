@@ -1,44 +1,79 @@
 import EduCore
 import EduNetwork
+import EduDomain
 import EduDynamicUI
 import Observation
 
 @MainActor
 @Observable
 final class ServiceContainer {
-    let networkClient: NetworkClient
+
+    // MARK: - Network
+
+    let plainNetworkClient: NetworkClient
+    let authenticatedNetworkClient: NetworkClient
+
+    // MARK: - Auth
+
+    let authService: AuthService
+
+    // MARK: - Sync
+
+    let syncService: SyncService
+    let localSyncStore: LocalSyncStore
+
+    // MARK: - DynamicUI
+
     let screenLoader: ScreenLoader
     let dataLoader: DataLoader
-    let authService: AuthService
+
+    // MARK: - Config
+
     let apiConfiguration: APIConfiguration
+
+    // MARK: - Initialization
 
     init(environment: AppEnvironment = .detect()) {
         let config = APIConfiguration.forEnvironment(environment)
         self.apiConfiguration = config
 
-        // Plain network client for auth (no interceptors)
-        let plainNetworkClient = NetworkClient()
+        // 1. Plain network client (sin interceptors) — para auth
+        let plainClient = NetworkClient()
+        self.plainNetworkClient = plainClient
+
+        // 2. AuthService (usa plain client para evitar dependencia circular)
         let authService = AuthService(
-            networkClient: plainNetworkClient,
-            adminBaseURL: config.adminBaseURL
+            networkClient: plainClient,
+            apiConfig: config
         )
         self.authService = authService
 
-        // Authenticated network client with interceptor
-        let tokenProvider = SimpleTokenProvider(
-            getToken: { await authService.getAccessToken() },
-            refresh: { await authService.refreshToken() },
-            isExpired: { await authService.isTokenExpired() }
+        // 3. Authenticated network client (con AuthenticationInterceptor)
+        let authInterceptor = AuthenticationInterceptor.standard(
+            tokenProvider: authService,
+            sessionExpiredHandler: authService
         )
-        let authInterceptor = AuthenticationInterceptor.standard(tokenProvider: tokenProvider)
-        self.networkClient = NetworkClient(interceptors: [authInterceptor])
+        let authenticatedClient = NetworkClient(interceptors: [authInterceptor])
+        self.authenticatedNetworkClient = authenticatedClient
 
+        // 4. LocalSyncStore
+        let localSyncStore = LocalSyncStore()
+        self.localSyncStore = localSyncStore
+
+        // 5. SyncService (usa authenticated client + local store)
+        self.syncService = SyncService(
+            networkClient: authenticatedClient,
+            localStore: localSyncStore,
+            apiConfig: config
+        )
+
+        // 6. DynamicUI loaders (usan authenticated client)
         self.screenLoader = ScreenLoader(
-            networkClient: networkClient,
+            networkClient: authenticatedClient,
             baseURL: config.mobileBaseURL
         )
         self.dataLoader = DataLoader(
-            networkClient: networkClient,
+            networkClient: authenticatedClient,
             adminBaseURL: config.adminBaseURL,
             mobileBaseURL: config.mobileBaseURL
         )

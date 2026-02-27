@@ -401,7 +401,7 @@ public actor InterceptableNetworkClient: NetworkClientProtocol {
 // MARK: - Builder Pattern
 
 /// Builder para crear InterceptableNetworkClient de forma fluida.
-public final class NetworkClientBuilder: @unchecked Sendable {
+public final class NetworkClientBuilder {
     private var interceptors: [any RequestInterceptor] = []
     private var retryPolicy: (any RetryPolicy)?
     private var maxRetryTimeout: TimeInterval = 120

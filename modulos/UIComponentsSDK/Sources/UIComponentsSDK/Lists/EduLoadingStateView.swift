@@ -1,7 +1,6 @@
 import SwiftUI
 import DesignSystemSDK
 
-@MainActor
 public struct EduLoadingStateView: View {
     @State private var isAnimating = false
 

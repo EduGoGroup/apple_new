@@ -1,0 +1,146 @@
+{
+  "material_single": {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "title": "Introduccion a las Matematicas",
+    "description": "Material educativo sobre fundamentos matematicos",
+    "subject": "Matematicas",
+    "grade": "6to Primaria",
+    "academic_unit_id": "550e8400-e29b-41d4-a716-446655440010",
+    "school_id": "550e8400-e29b-41d4-a716-446655440020",
+    "uploaded_by_teacher_id": "550e8400-e29b-41d4-a716-446655440030",
+    "file_type": "application/pdf",
+    "file_size_bytes": 1048576,
+    "file_url": "https://storage.edugo.com/materials/math-intro.pdf",
+    "status": "ready",
+    "is_public": true,
+    "created_at": "2026-01-15T10:30:00Z",
+    "updated_at": "2026-01-20T14:45:00Z",
+    "deleted_at": null,
+    "processing_started_at": "2026-01-15T10:31:00Z",
+    "processing_completed_at": "2026-01-15T10:35:00Z"
+  },
+  "material_list": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "title": "Introduccion a las Matematicas",
+      "description": "Material educativo sobre fundamentos matematicos",
+      "subject": "Matematicas",
+      "grade": "6to Primaria",
+      "academic_unit_id": "550e8400-e29b-41d4-a716-446655440010",
+      "school_id": "550e8400-e29b-41d4-a716-446655440020",
+      "uploaded_by_teacher_id": "550e8400-e29b-41d4-a716-446655440030",
+      "file_type": "application/pdf",
+      "file_size_bytes": 1048576,
+      "file_url": "https://storage.edugo.com/materials/math-intro.pdf",
+      "status": "ready",
+      "is_public": true,
+      "created_at": "2026-01-15T10:30:00Z",
+      "updated_at": "2026-01-20T14:45:00Z",
+      "deleted_at": null,
+      "processing_started_at": "2026-01-15T10:31:00Z",
+      "processing_completed_at": "2026-01-15T10:35:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "title": "Ciencias Naturales - Ecosistemas",
+      "description": "Estudio de los ecosistemas y biodiversidad",
+      "subject": "Ciencias Naturales",
+      "grade": "5to Primaria",
+      "academic_unit_id": "550e8400-e29b-41d4-a716-446655440010",
+      "school_id": "550e8400-e29b-41d4-a716-446655440020",
+      "uploaded_by_teacher_id": "550e8400-e29b-41d4-a716-446655440031",
+      "file_type": "application/pdf",
+      "file_size_bytes": 2097152,
+      "file_url": "https://storage.edugo.com/materials/ecosystems.pdf",
+      "status": "ready",
+      "is_public": false,
+      "created_at": "2026-01-10T09:00:00Z",
+      "updated_at": "2026-01-18T11:20:00Z",
+      "deleted_at": null,
+      "processing_started_at": "2026-01-10T09:01:00Z",
+      "processing_completed_at": "2026-01-10T09:10:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440003",
+      "title": "Historia de Colombia",
+      "description": "Material sobre la historia colombiana",
+      "subject": "Historia",
+      "grade": "7mo",
+      "academic_unit_id": "550e8400-e29b-41d4-a716-446655440011",
+      "school_id": "550e8400-e29b-41d4-a716-446655440020",
+      "uploaded_by_teacher_id": "550e8400-e29b-41d4-a716-446655440032",
+      "file_type": "video/mp4",
+      "file_size_bytes": 52428800,
+      "file_url": "https://storage.edugo.com/materials/history-col.mp4",
+      "status": "processing",
+      "is_public": true,
+      "created_at": "2026-01-25T08:00:00Z",
+      "updated_at": "2026-01-25T08:00:00Z",
+      "deleted_at": null,
+      "processing_started_at": "2026-01-25T08:01:00Z",
+      "processing_completed_at": null
+    }
+  ],
+  "assessment_request": {
+    "answers": [
+      {
+        "question_id": "q-001",
+        "selected_answer_id": "a-001-b",
+        "time_spent_seconds": 45
+      },
+      {
+        "question_id": "q-002",
+        "selected_answer_id": "a-002-a",
+        "time_spent_seconds": 30
+      },
+      {
+        "question_id": "q-003",
+        "selected_answer_id": "a-003-c",
+        "time_spent_seconds": 60
+      }
+    ],
+    "time_spent_seconds": 180
+  },
+  "assessment_result": {
+    "attempt_id": "attempt-550e8400-e29b-41d4-a716-446655440100",
+    "assessment_id": "assess-550e8400-e29b-41d4-a716-446655440050",
+    "material_id": "550e8400-e29b-41d4-a716-446655440001",
+    "score": 80,
+    "max_score": 100,
+    "correct_answers": 8,
+    "total_questions": 10,
+    "passed": true,
+    "pass_threshold": 70,
+    "previous_best_score": 65,
+    "can_retake": true,
+    "time_spent_seconds": 180,
+    "started_at": "2026-01-28T10:00:00Z",
+    "completed_at": "2026-01-28T10:03:00Z",
+    "feedback": [
+      {
+        "question_id": "q-001",
+        "question_text": "Cuanto es 2 + 2?",
+        "selected_option": "4",
+        "correct_answer": "4",
+        "is_correct": true,
+        "message": "Correcto!"
+      },
+      {
+        "question_id": "q-002",
+        "question_text": "Cuanto es 5 x 3?",
+        "selected_option": "15",
+        "correct_answer": "15",
+        "is_correct": true,
+        "message": "Excelente!"
+      },
+      {
+        "question_id": "q-003",
+        "question_text": "Cuanto es 10 / 2?",
+        "selected_option": "6",
+        "correct_answer": "5",
+        "is_correct": false,
+        "message": "La respuesta correcta es 5"
+      }
+    ]
+  }
+}

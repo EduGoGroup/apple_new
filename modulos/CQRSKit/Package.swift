@@ -1,12 +1,12 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 
 import PackageDescription
 
 let package = Package(
     name: "CQRSKit",
     platforms: [
-        .iOS(.v18),
-        .macOS(.v15)
+        .iOS(.v26),
+        .macOS(.v26)
     ],
     products: [
         .library(
@@ -17,18 +17,12 @@ let package = Package(
     targets: [
         .target(
             name: "CQRSKit",
-            path: "Sources/CQRSKit",
-            swiftSettings: [
-                .swiftLanguageMode(.v6)
-            ]
+            path: "Sources/CQRSKit"
         ),
         .testTarget(
             name: "CQRSKitTests",
             dependencies: ["CQRSKit"],
-            path: "Tests/CQRSKitTests",
-            swiftSettings: [
-                .swiftLanguageMode(.v6)
-            ]
+            path: "Tests/CQRSKitTests"
         )
     ]
 )

@@ -16,7 +16,6 @@ public enum EduSkeletonShape: Sendable {
 /// Skeleton loader con efecto shimmer optimizado
 ///
 /// Usa animaciones energy-efficient y soporta accessibility.
-@MainActor
 public struct EduSkeletonLoader: View {
     private let shape: EduSkeletonShape
     @State private var opacity: Double = 0.3
@@ -63,7 +62,6 @@ public struct EduSkeletonLoader: View {
 // MARK: - Skeleton Text
 
 /// Skeleton para texto
-@MainActor
 public struct EduSkeletonText: View {
     private let lines: Int
     private let spacing: CGFloat
@@ -94,7 +92,6 @@ public struct EduSkeletonText: View {
 // MARK: - Skeleton Image
 
 /// Skeleton para imágenes
-@MainActor
 public struct EduSkeletonImage: View {
     private let aspectRatio: CGFloat?
     private let shape: EduSkeletonShape
@@ -113,7 +110,6 @@ public struct EduSkeletonImage: View {
 // MARK: - Skeleton Card
 
 /// Skeleton para cards
-@MainActor
 public struct EduSkeletonCard: View {
     private let showImage: Bool
     private let lines: Int
@@ -150,7 +146,6 @@ public struct EduSkeletonCard: View {
 // MARK: - Skeleton List
 
 /// Skeleton para listas
-@MainActor
 public struct EduSkeletonList: View {
     private let count: Int
 
@@ -170,7 +165,6 @@ public struct EduSkeletonList: View {
 // MARK: - Skeleton List Row
 
 /// Skeleton para row de lista
-@MainActor
 public struct EduSkeletonListRow: View {
     public init() {}
 
@@ -200,7 +194,6 @@ public struct EduSkeletonListRow: View {
 // MARK: - Shimmer Effect
 
 /// Efecto shimmer para skeleton loaders con animación energy-efficient
-@MainActor
 public struct ShimmerEffect: ViewModifier {
     @State private var phase: CGFloat = 0
 
@@ -242,7 +235,6 @@ extension View {
 // MARK: - Skeleton Group
 
 /// Grupo de skeletons con shimmer
-@MainActor
 public struct EduSkeletonGroup<Content: View>: View {
     private let content: () -> Content
 

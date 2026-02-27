@@ -38,7 +38,7 @@ public struct DebouncedProperty<Value: Sendable>: Sendable {
                 let newValueCopy = newValue
                 let interval = debounceInterval
 
-                debounceTask = Task { @MainActor in
+                debounceTask = Task {
                     try? await Task.sleep(for: .seconds(interval))
 
                     guard !Task.isCancelled else { return }
@@ -88,7 +88,7 @@ public struct DebouncedProperty<Value: Sendable>: Sendable {
 
         if let onDebouncedChange {
             let currentValue = value
-            debounceTask = Task { @MainActor in
+            debounceTask = Task {
                 await onDebouncedChange(currentValue)
             }
         }

@@ -12,7 +12,6 @@ import SwiftUI
 /// }
 /// .formErrorBanner(viewModel.formState)
 /// ```
-@MainActor
 public struct FormErrorBannerModifier: ViewModifier {
 
     /// The form state to observe for errors.

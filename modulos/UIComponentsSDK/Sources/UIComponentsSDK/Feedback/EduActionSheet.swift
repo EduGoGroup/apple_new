@@ -48,7 +48,6 @@ public struct EduActionSheetContent: Sendable {
 // MARK: - iOS/visionOS Action Sheet
 
 #if os(iOS) || os(visionOS)
-@MainActor
 public struct EduActionSheetView: View {
     @Binding private var isPresented: Bool
     private let content: EduActionSheetContent
@@ -127,7 +126,6 @@ public struct EduActionSheetView: View {
 // MARK: - macOS Action Sheet (implementado como popover)
 
 #if os(macOS)
-@MainActor
 public struct EduActionSheetView: View {
     @Binding private var isPresented: Bool
     private let content: EduActionSheetContent

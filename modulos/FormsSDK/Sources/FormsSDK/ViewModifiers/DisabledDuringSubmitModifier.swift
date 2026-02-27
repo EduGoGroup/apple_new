@@ -13,7 +13,6 @@ import SwiftUI
 /// }
 /// .disabledDuringSubmit(viewModel.formState)
 /// ```
-@MainActor
 public struct DisabledDuringSubmitModifier: ViewModifier {
 
     /// The form state to observe.

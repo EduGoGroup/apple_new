@@ -27,7 +27,6 @@ public struct EduBreadcrumbItem: Identifiable, Sendable {
 /// - Mínimo: 1 item (item actual)
 /// - Máximo: 5 niveles de profundidad para óptima legibilidad
 /// - UX típico: 3-4 niveles visibles
-@MainActor
 public struct EduBreadcrumbs: View {
     private let items: [EduBreadcrumbItem]
     private let onNavigate: (@Sendable (String) -> Void)?
@@ -241,7 +240,6 @@ public final class EduBreadcrumbCoordinator: Sendable {
 // MARK: - Platform Independent Breadcrumb
 
 /// Breadcrumb que se adapta a la plataforma
-@MainActor
 public struct EduPlatformBreadcrumbs: View {
     private let items: [EduBreadcrumbItem]
     private let onNavigate: (@Sendable (String) -> Void)?

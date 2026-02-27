@@ -10,7 +10,6 @@ import SwiftUI
 /// Provides consistent styling for form fields with labels,
 /// required indicators, help text, and validation feedback.
 @available(iOS 26.0, macOS 26.0, *)
-@MainActor
 public struct EduFormField<Content: View>: View {
     public let label: String
     public let isRequired: Bool

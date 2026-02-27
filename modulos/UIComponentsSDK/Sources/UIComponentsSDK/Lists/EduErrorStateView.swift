@@ -1,7 +1,6 @@
 import SwiftUI
 import DesignSystemSDK
 
-@MainActor
 public struct EduErrorStateView: View {
     private let title: String
     private let message: String

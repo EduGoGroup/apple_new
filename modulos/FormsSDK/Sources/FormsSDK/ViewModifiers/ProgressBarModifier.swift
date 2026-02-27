@@ -12,7 +12,6 @@ import SwiftUI
 /// }
 /// .progressBar(progress: viewModel.uploadProgress)
 /// ```
-@MainActor
 public struct ProgressBarModifier: ViewModifier {
 
     /// The current progress value (0.0 to 1.0).

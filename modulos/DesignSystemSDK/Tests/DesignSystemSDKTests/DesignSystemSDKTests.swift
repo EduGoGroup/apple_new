@@ -1,457 +1,450 @@
-import XCTest
+import Testing
 @testable import DesignSystemSDK
 
 // MARK: - Theme Tests
 
-final class ThemeTests: XCTestCase {
+@Suite struct ThemeTests {
 
-    func testDefaultTheme() {
+    @Test func testDefaultTheme() {
         let theme = Theme.default
-        XCTAssertEqual(theme.id, "default")
-        XCTAssertEqual(theme.name, "Default")
+        #expect(theme.id == "default")
+        #expect(theme.name == "Default")
     }
 
-    func testDarkTheme() {
+    @Test func testDarkTheme() {
         let theme = Theme.dark
-        XCTAssertEqual(theme.id, "dark")
+        #expect(theme.id == "dark")
     }
 
-    func testHighContrastTheme() {
+    @Test func testHighContrastTheme() {
         let theme = Theme.highContrast
-        XCTAssertEqual(theme.id, "highContrast")
+        #expect(theme.id == "highContrast")
     }
 
-    func testGrayscaleTheme() {
+    @Test func testGrayscaleTheme() {
         let theme = Theme.grayscale
-        XCTAssertEqual(theme.id, "grayscale")
+        #expect(theme.id == "grayscale")
     }
 
-    func testCustomTheme() {
+    @Test func testCustomTheme() {
         let custom = Theme.custom(
             id: "myTheme",
             name: "My Theme",
             palette: .default
         )
-        XCTAssertEqual(custom.id, "myTheme")
-        XCTAssertEqual(custom.name, "My Theme")
+        #expect(custom.id == "myTheme")
+        #expect(custom.name == "My Theme")
     }
 
-    func testThemeEquality() {
+    @Test func testThemeEquality() {
         let a = Theme.default
         let b = Theme.default
-        XCTAssertEqual(a, b)
-        XCTAssertNotEqual(Theme.default, Theme.dark)
+        #expect(a == b)
+        #expect(Theme.default != Theme.dark)
     }
 }
 
 // MARK: - Typography Tests
 
-final class TypographyTests: XCTestCase {
+@Suite struct TypographyTests {
 
-    func testDefaultTypography() {
+    @Test func testDefaultTypography() {
         let typo = Typography.default
-        XCTAssertFalse(typo.fontFamily.isEmpty)
-        XCTAssertGreaterThan(typo.baseSize, 0)
+        #expect(!typo.fontFamily.isEmpty)
+        #expect(typo.baseSize > 0)
     }
 
-    func testCompactTypography() {
+    @Test func testCompactTypography() {
         let compact = Typography.compact
         let def = Typography.default
-        XCTAssertLessThanOrEqual(compact.baseSize, def.baseSize)
+        #expect(compact.baseSize <= def.baseSize)
     }
 
-    func testLargeTypography() {
+    @Test func testLargeTypography() {
         let large = Typography.large
         let def = Typography.default
-        XCTAssertGreaterThanOrEqual(large.baseSize, def.baseSize)
+        #expect(large.baseSize >= def.baseSize)
     }
 }
 
 // MARK: - Spacing Tests
 
-final class SpacingTests: XCTestCase {
+@Suite struct SpacingTests {
 
-    func testDefaultSpacing() {
+    @Test func testDefaultSpacing() {
         let spacing = Spacing.default
-        XCTAssertGreaterThan(spacing.md, 0)
+        #expect(spacing.md > 0)
     }
 
-    func testCompactSpacing() {
+    @Test func testCompactSpacing() {
         let compact = Spacing.compact
         let def = Spacing.default
-        XCTAssertLessThanOrEqual(compact.md, def.md)
+        #expect(compact.md <= def.md)
     }
 
-    func testGenerousSpacing() {
+    @Test func testGenerousSpacing() {
         let generous = Spacing.generous
         let def = Spacing.default
-        XCTAssertGreaterThanOrEqual(generous.md, def.md)
+        #expect(generous.md >= def.md)
     }
 }
 
 // MARK: - CornerRadius Tests
 
-final class CornerRadiusTests: XCTestCase {
+@Suite struct CornerRadiusTests {
 
-    func testDefaultCornerRadius() {
+    @Test func testDefaultCornerRadius() {
         let cr = CornerRadius.default
-        XCTAssertGreaterThan(cr.md, 0)
+        #expect(cr.md > 0)
     }
 
-    func testSquareCornerRadius() {
+    @Test func testSquareCornerRadius() {
         let square = CornerRadius.square
-        XCTAssertEqual(square.sm, 0)
+        #expect(square.sm == 0)
     }
 
-    func testSoftCornerRadius() {
+    @Test func testSoftCornerRadius() {
         let soft = CornerRadius.soft
         let def = CornerRadius.default
-        XCTAssertGreaterThanOrEqual(soft.md, def.md)
+        #expect(soft.md >= def.md)
     }
 }
 
 // MARK: - Shadows Tests
 
-final class ShadowsTests: XCTestCase {
+@Suite struct ShadowsTests {
 
-    func testDefaultShadows() {
+    @Test func testDefaultShadows() {
         let shadows = Shadows.default
-        XCTAssertNotNil(shadows.md)
+        #expect(shadows.md != nil)
     }
 }
 
 // MARK: - ColorPalette Tests
 
-final class ColorPaletteTests: XCTestCase {
+@Suite struct ColorPaletteTests {
 
-    func testDefaultPalette() {
+    @Test func testDefaultPalette() {
         let palette = ColorPalette.default
-        XCTAssertNotNil(palette.primary)
-        XCTAssertNotNil(palette.secondary)
-        XCTAssertNotNil(palette.error)
+        #expect(palette.primary != nil)
+        #expect(palette.secondary != nil)
+        #expect(palette.error != nil)
     }
 
-    func testHighContrastPalette() {
+    @Test func testHighContrastPalette() {
         let palette = ColorPalette.highContrast
-        XCTAssertNotNil(palette.primary)
+        #expect(palette.primary != nil)
     }
 
-    func testGrayscalePalette() {
+    @Test func testGrayscalePalette() {
         let palette = ColorPalette.grayscale
-        XCTAssertNotNil(palette.primary)
+        #expect(palette.primary != nil)
     }
 }
 
 // MARK: - ColorToken Tests
 
-final class ColorTokenTests: XCTestCase {
+@Suite struct ColorTokenTests {
 
-    func testColorTokenResolveLight() {
+    @Test func testColorTokenResolveLight() {
         let token = ColorToken(light: .white, dark: .black)
         let resolved = token.resolve(for: .light)
-        XCTAssertEqual(resolved, .white)
+        #expect(resolved == .white)
     }
 
-    func testColorTokenResolveDark() {
+    @Test func testColorTokenResolveDark() {
         let token = ColorToken(light: .white, dark: .black)
         let resolved = token.resolve(for: .dark)
-        XCTAssertEqual(resolved, .black)
+        #expect(resolved == .black)
     }
 }
 
 // MARK: - AccessibilityIdentifier Tests
 
-final class AccessibilityIdentifierTests: XCTestCase {
+@Suite struct AccessibilityIdentifierTests {
 
-    func testButtonIdentifier() {
+    @Test func testButtonIdentifier() {
         let id = AccessibilityIdentifier.button(module: "auth", screen: "login", action: "submit")
-        XCTAssertEqual(id.id, "auth_login_button_submit")
+        #expect(id.id == "auth_login_button_submit")
     }
 
-    func testTextFieldIdentifier() {
+    @Test func testTextFieldIdentifier() {
         let id = AccessibilityIdentifier.textField(module: "auth", screen: "login", field: "email")
-        XCTAssertEqual(id.id, "auth_login_textfield_email")
+        #expect(id.id == "auth_login_textfield_email")
     }
 
-    func testToggleIdentifier() {
+    @Test func testToggleIdentifier() {
         let id = AccessibilityIdentifier.toggle(module: "settings", screen: "main", setting: "dark")
-        XCTAssertEqual(id.id, "settings_main_toggle_dark")
+        #expect(id.id == "settings_main_toggle_dark")
     }
 
-    func testLinkIdentifier() {
+    @Test func testLinkIdentifier() {
         let id = AccessibilityIdentifier.link(module: "nav", screen: "home", destination: "profile")
-        XCTAssertEqual(id.id, "nav_home_link_profile")
+        #expect(id.id == "nav_home_link_profile")
     }
 
-    func testTabIdentifier() {
+    @Test func testTabIdentifier() {
         let id = AccessibilityIdentifier.tab(module: "nav", name: "home")
-        XCTAssertEqual(id.id, "nav_tab_home")
+        #expect(id.id == "nav_tab_home")
     }
 
-    func testCellIdentifier() {
+    @Test func testCellIdentifier() {
         let id = AccessibilityIdentifier.cell(module: "list", screen: "users", index: 0)
-        XCTAssertEqual(id.id, "list_users_cell_0")
+        #expect(id.id == "list_users_cell_0")
     }
 
-    func testCustomIdentifier() {
+    @Test func testCustomIdentifier() {
         let id = AccessibilityIdentifier.custom("my_custom_id")
-        XCTAssertEqual(id.id, "my_custom_id")
+        #expect(id.id == "my_custom_id")
     }
 
-    func testEquality() {
+    @Test func testEquality() {
         let a = AccessibilityIdentifier.custom("test")
         let b = AccessibilityIdentifier.custom("test")
-        XCTAssertEqual(a, b)
+        #expect(a == b)
     }
 
-    func testIsValid() {
+    @Test func testIsValid() {
         let valid = AccessibilityIdentifier.button(module: "auth", screen: "login", action: "submit")
-        XCTAssertTrue(valid.isValid)
+        #expect(valid.isValid)
 
         let invalid = AccessibilityIdentifier.custom("")
-        XCTAssertFalse(invalid.isValid)
+        #expect(!invalid.isValid)
     }
 
-    func testComponents() {
+    @Test func testComponents() {
         let id = AccessibilityIdentifier.button(module: "auth", screen: "login", action: "submit")
-        XCTAssertEqual(id.components, ["auth", "login", "button", "submit"])
+        #expect(id.components == ["auth", "login", "button", "submit"])
     }
 
-    func testModule() {
+    @Test func testModule() {
         let id = AccessibilityIdentifier.button(module: "auth", screen: "login", action: "submit")
-        XCTAssertEqual(id.module, "auth")
+        #expect(id.module == "auth")
     }
 }
 
 // MARK: - AccessibilityIdentifierBuilder Tests
 
-final class AccessibilityIdentifierBuilderTests: XCTestCase {
+@Suite struct AccessibilityIdentifierBuilderTests {
 
-    func testBuilderFlow() {
+    @Test func testBuilderFlow() {
         let id = AccessibilityIdentifierBuilder()
             .module("auth")
             .screen("login")
             .component("button")
             .descriptor("submit")
             .build()
-        XCTAssertEqual(id.id, "auth_login_button_submit")
+        #expect(id.id == "auth_login_button_submit")
     }
 
-    func testBuilderWithIndex() {
+    @Test func testBuilderWithIndex() {
         let id = AccessibilityIdentifierBuilder()
             .module("list")
             .screen("users")
             .component("cell")
             .index(3)
             .build()
-        XCTAssertEqual(id.id, "list_users_cell_3")
+        #expect(id.id == "list_users_cell_3")
     }
 }
 
 // MARK: - AccessibilityIdentifier Registry Tests
 
-@MainActor
-final class AccessibilityIdentifierRegistryTests: XCTestCase {
+@MainActor @Suite struct AccessibilityIdentifierRegistryTests {
 
-    override func setUp() async throws {
-        try await super.setUp()
+    init() {
         AccessibilityIdentifierRegistry.shared.reset()
     }
 
-    func testRegisterAndCheck() {
+    @Test func testRegisterAndCheck() {
         let id = AccessibilityIdentifier.custom("test_register")
         let registry = AccessibilityIdentifierRegistry.shared
         let registered = registry.register(id)
-        XCTAssertTrue(registered)
-        XCTAssertTrue(registry.isRegistered(id))
+        #expect(registered)
+        #expect(registry.isRegistered(id))
     }
 
-    func testDuplicateRegister() {
+    @Test func testDuplicateRegister() {
         let id = AccessibilityIdentifier.custom("test_dup")
         let registry = AccessibilityIdentifierRegistry.shared
         _ = registry.register(id)
         let second = registry.register(id)
-        XCTAssertFalse(second)
+        #expect(!second)
     }
 
-    func testReset() {
+    @Test func testReset() {
         let id = AccessibilityIdentifier.custom("test_reset")
         let registry = AccessibilityIdentifierRegistry.shared
         _ = registry.register(id)
         registry.reset()
-        XCTAssertFalse(registry.isRegistered(id))
+        #expect(!registry.isRegistered(id))
     }
 
-    func testAllIdentifiers() {
+    @Test func testAllIdentifiers() {
         let registry = AccessibilityIdentifierRegistry.shared
+        registry.reset()
         _ = registry.register(AccessibilityIdentifier.custom("z_last"))
         _ = registry.register(AccessibilityIdentifier.custom("a_first"))
         let all = registry.allIdentifiers
-        XCTAssertEqual(all, ["a_first", "z_last"])
+        #expect(all == ["a_first", "z_last"])
     }
 }
 
 // MARK: - EduShadowLevel Tests
 
-@available(macOS 26.0, iOS 26.0, *)
-final class EduShadowLevelTests: XCTestCase {
+@Suite struct EduShadowLevelTests {
 
-    func testAllCases() {
-        XCTAssertGreaterThan(EduShadowLevel.allCases.count, 0)
+    @Test func testAllCases() {
+        #expect(EduShadowLevel.allCases.count > 0)
     }
 
-    func testConfigurationNotNil() {
+    @Test func testConfigurationNotNil() {
         for level in EduShadowLevel.allCases {
             let config = level.configuration
-            XCTAssertGreaterThanOrEqual(config.radius, 0)
+            #expect(config.radius >= 0)
         }
     }
 }
 
 // MARK: - EduShadowConfiguration Tests
 
-@available(macOS 26.0, iOS 26.0, *)
-final class EduShadowConfigurationTests: XCTestCase {
+@Suite struct EduShadowConfigurationTests {
 
-    func testInit() {
+    @Test func testInit() {
         let config = EduShadowConfiguration(color: .black, radius: 4, x: 0, y: 2)
-        XCTAssertEqual(config.radius, 4)
-        XCTAssertEqual(config.x, 0)
-        XCTAssertEqual(config.y, 2)
+        #expect(config.radius == 4)
+        #expect(config.x == 0)
+        #expect(config.y == 2)
     }
 
-    func testEquality() {
+    @Test func testEquality() {
         let a = EduShadowConfiguration(color: .black, radius: 4, x: 0, y: 2)
         let b = EduShadowConfiguration(color: .black, radius: 4, x: 0, y: 2)
-        XCTAssertEqual(a, b)
+        #expect(a == b)
     }
 }
 
 // MARK: - EduLiquidRoundedRectangle Tests
 
-@available(macOS 26.0, iOS 26.0, *)
-final class EduLiquidRoundedRectangleTests: XCTestCase {
+@Suite struct EduLiquidRoundedRectangleTests {
 
-    func testInit() {
+    @Test func testInit() {
         let shape = EduLiquidRoundedRectangle(cornerRadius: 16, smoothness: 0.6)
-        XCTAssertEqual(shape.cornerRadius, 16)
-        XCTAssertEqual(shape.smoothness, 0.6)
+        #expect(shape.cornerRadius == 16)
+        #expect(shape.smoothness == 0.6)
     }
 
-    func testDefaultInit() {
+    @Test func testDefaultInit() {
         let shape = EduLiquidRoundedRectangle()
-        XCTAssertEqual(shape.cornerRadius, 16)
-        XCTAssertEqual(shape.smoothness, 0.6)
+        #expect(shape.cornerRadius == 16)
+        #expect(shape.smoothness == 0.6)
     }
 }
 
 // MARK: - EduMorphableShape Tests
 
-@available(macOS 26.0, iOS 26.0, *)
-final class EduMorphableShapeTests: XCTestCase {
+@Suite struct EduMorphableShapeTests {
 
-    func testCornerFactor() {
-        XCTAssertEqual(EduMorphableShape.circle.cornerFactor, .infinity)
-        XCTAssertEqual(EduMorphableShape.rectangle.cornerFactor, 0)
+    @Test func testCornerFactor() {
+        #expect(EduMorphableShape.circle.cornerFactor == .infinity)
+        #expect(EduMorphableShape.rectangle.cornerFactor == 0)
     }
 }
 
 // MARK: - ScalingMetrics Tests
 
-final class ScalingMetricsEnvironmentTests: XCTestCase {
+@Suite struct ScalingMetricsEnvironmentTests {
 
-    func testDefaultSizeCategory() {
+    @Test func testDefaultSizeCategory() {
         let env = ScalingMetricsEnvironment()
-        XCTAssertEqual(env.sizeCategory, .large)
+        #expect(env.sizeCategory == .large)
     }
 
-    func testSpacingValues() {
+    @Test func testSpacingValues() {
         let env = ScalingMetricsEnvironment()
-        XCTAssertGreaterThan(env.spacingXS, 0)
-        XCTAssertGreaterThan(env.spacingSM, 0)
-        XCTAssertGreaterThan(env.spacingMD, 0)
-        XCTAssertGreaterThan(env.spacingLG, 0)
+        #expect(env.spacingXS > 0)
+        #expect(env.spacingSM > 0)
+        #expect(env.spacingMD > 0)
+        #expect(env.spacingLG > 0)
     }
 
-    func testSpacingOrdering() {
+    @Test func testSpacingOrdering() {
         let env = ScalingMetricsEnvironment()
-        XCTAssertLessThan(env.spacingXS, env.spacingSM)
-        XCTAssertLessThan(env.spacingSM, env.spacingMD)
-        XCTAssertLessThan(env.spacingMD, env.spacingLG)
+        #expect(env.spacingXS < env.spacingSM)
+        #expect(env.spacingSM < env.spacingMD)
+        #expect(env.spacingMD < env.spacingLG)
     }
 }
 
 // MARK: - ColorSchemePreference Tests
 
-@MainActor
-final class ColorSchemePreferenceTests: XCTestCase {
+@MainActor @Suite struct ColorSchemePreferenceTests {
 
-    func testAllCases() {
+    @Test func testAllCases() {
         let cases = ColorSchemePreference.allCases
-        XCTAssertEqual(cases.count, 3)
+        #expect(cases.count == 3)
     }
 
-    func testDisplayName() {
+    @Test func testDisplayName() {
         for pref in ColorSchemePreference.allCases {
-            XCTAssertFalse(pref.displayName.isEmpty)
+            #expect(!pref.displayName.isEmpty)
         }
     }
 }
 
 // MARK: - ThemeManager Tests
 
-@MainActor
-final class ThemeManagerTests: XCTestCase {
+@MainActor @Suite struct ThemeManagerTests {
 
-    func testInit() {
+    @Test func testInit() {
         let manager = ThemeManager()
-        XCTAssertNotNil(manager)
+        #expect(manager != nil)
     }
 
-    func testSetTheme() {
+    @Test func testSetTheme() {
         let manager = ThemeManager()
         manager.setTheme(.dark)
-        XCTAssertEqual(manager.currentTheme.id, "dark")
+        #expect(manager.currentTheme.id == "dark")
     }
 
-    func testSetColorScheme() {
+    @Test func testSetColorScheme() {
         let manager = ThemeManager()
         manager.setColorScheme(.dark)
-        XCTAssertTrue(manager.isDarkMode)
+        #expect(manager.isDarkMode)
     }
 
-    func testAutoMode() {
+    @Test func testAutoMode() {
         let manager = ThemeManager()
         manager.setColorScheme(.auto)
-        XCTAssertTrue(manager.isAutoMode)
+        #expect(manager.isAutoMode)
     }
 
-    func testReset() {
+    @Test func testReset() {
         let manager = ThemeManager()
         manager.setTheme(.dark)
         manager.reset()
-        XCTAssertEqual(manager.currentTheme.id, "default")
+        #expect(manager.currentTheme.id == "default")
     }
 
-    func testAvailableThemes() {
+    @Test func testAvailableThemes() {
         let manager = ThemeManager()
-        XCTAssertGreaterThan(manager.availableThemes.count, 0)
+        #expect(manager.availableThemes.count > 0)
     }
 
-    func testLoadCustomTheme() {
+    @Test func testLoadCustomTheme() {
         let manager = ThemeManager()
         let custom = Theme.custom(id: "test", name: "Test", palette: .default)
         manager.loadCustomTheme(custom)
-        XCTAssertEqual(manager.currentTheme.id, "test")
+        #expect(manager.currentTheme.id == "test")
     }
 }
 
 // MARK: - String Extension Tests
 
-final class StringAccessibilityTests: XCTestCase {
+@Suite struct StringAccessibilityTests {
 
-    func testAsAccessibilityIdentifier() {
+    @Test func testAsAccessibilityIdentifier() {
         let id = "my_button".asAccessibilityIdentifier
-        XCTAssertEqual(id.id, "my_button")
+        #expect(id.id == "my_button")
     }
 }

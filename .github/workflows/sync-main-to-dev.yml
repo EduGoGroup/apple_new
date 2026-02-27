@@ -1,0 +1,84 @@
+name: Sync Main to Dev
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sync main → dev
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, 'chore: sync')"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Check if dev branch exists
+        id: check_dev
+        run: |
+          if git ls-remote --heads origin dev | grep -q dev; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create dev branch if missing
+        if: steps.check_dev.outputs.exists == 'false'
+        run: |
+          git checkout -b dev
+          git push -u origin dev
+
+      - name: Check for commits to sync
+        id: check_diff
+        run: |
+          git fetch origin dev
+
+          COMMITS_AHEAD=$(git rev-list --count origin/dev..origin/main)
+
+          if [ "$COMMITS_AHEAD" -eq 0 ]; then
+            echo "has_diff=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_diff=true" >> $GITHUB_OUTPUT
+            echo "$COMMITS_AHEAD commits to sync:"
+            git log --oneline origin/dev..origin/main
+          fi
+
+      - name: Merge main to dev
+        if: steps.check_diff.outputs.has_diff == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout dev
+          git pull origin dev
+
+          if git merge origin/main --no-ff -m "chore: sync main to dev
+
+          Automatic sync from main to dev after merge.
+
+          Generated with GitHub Actions"; then
+            git push origin dev
+            echo "Sync successful: main → dev"
+          else
+            echo "::error::Merge conflicts detected — manual resolution required"
+            git status --short
+            git merge --abort
+            exit 1
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "# Sync Main → Dev" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| dev branch exists | ${{ steps.check_dev.outputs.exists }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Differences found | ${{ steps.check_diff.outputs.has_diff }} |" >> $GITHUB_STEP_SUMMARY
