@@ -5,7 +5,16 @@ struct DeepLink: Equatable, Sendable, Identifiable {
     let screenKey: String
     let params: [String: String]
 
-    var id: String { screenKey }
+    var id: String {
+        if params.isEmpty {
+            return screenKey
+        }
+        let query = params
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }
+            .joined(separator: "&")
+        return "\(screenKey)?\(query)"
+    }
 }
 
 @MainActor
@@ -38,9 +47,4 @@ final class DeepLinkHandler {
         pendingDeepLink = handle(url: url)
     }
 
-    func consumePending() -> DeepLink? {
-        guard let link = pendingDeepLink else { return nil }
-        pendingDeepLink = nil
-        return link
-    }
 }

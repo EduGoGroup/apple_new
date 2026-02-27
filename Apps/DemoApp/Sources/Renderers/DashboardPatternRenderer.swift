@@ -188,20 +188,33 @@ struct DashboardPatternRenderer: View {
 
     @ViewBuilder
     private var dashboardSkeleton: some View {
+        let metricSlotCount = screen.template.zones
+            .filter { $0.type == .metricGrid }
+            .reduce(0) { total, zone in
+                let direct = zone.slots?.count ?? 0
+                let nested = zone.zones?.reduce(0) { $0 + ($1.slots?.count ?? 0) } ?? 0
+                return total + direct + nested
+            }
+        let actionSlotCount = screen.template.zones
+            .filter { $0.type == .actionGroup }
+            .reduce(0) { $0 + (($1.slots?.count ?? 0)) }
+
         VStack(spacing: 16) {
             LazyVGrid(columns: metricColumns, spacing: 12) {
-                ForEach(0..<6, id: \.self) { _ in
+                ForEach(0..<max(metricSlotCount, 4), id: \.self) { _ in
                     skeletonMetricCard
                 }
             }
             .shimmer()
 
-            LazyVGrid(columns: quickActionColumns, spacing: 12) {
-                ForEach(0..<4, id: \.self) { _ in
-                    skeletonQuickAction
+            if actionSlotCount > 0 {
+                LazyVGrid(columns: quickActionColumns, spacing: 12) {
+                    ForEach(0..<actionSlotCount, id: \.self) { _ in
+                        skeletonQuickAction
+                    }
                 }
+                .shimmer()
             }
-            .shimmer()
         }
     }
 

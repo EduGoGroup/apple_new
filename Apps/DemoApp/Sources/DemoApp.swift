@@ -76,6 +76,8 @@ struct DemoApp: App {
                                         debugLog("DEBUG [Menu] item: key=\(item.key), name=\(item.displayName), children=\(item.children?.count ?? 0), perms=\(item.permissions)")
                                     }
                                     await container.screenLoader.seedFromBundle(screens: bundle.screens)
+                                    container.serverStringResolver.updateFromBundle(bundle)
+                                    container.glossaryProvider.updateFromBundle(bundle)
                                 } catch {
                                     debugLog("DEBUG [Sync] fullSync FAILED: \(error)")
                                 }

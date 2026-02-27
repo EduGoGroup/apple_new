@@ -29,13 +29,17 @@ final class ScreenErrorHandler {
 /// ViewModifier that shows a fallback view when an error is reported.
 struct ErrorBoundary: ViewModifier {
     @Bindable var errorHandler: ScreenErrorHandler
+    let onRetry: (() -> Void)?
     let onNavigateHome: (() -> Void)?
 
     func body(content: Content) -> some View {
         if let error = errorHandler.currentError {
             ErrorFallbackView(
                 error: error,
-                onRetry: { errorHandler.clear() },
+                onRetry: {
+                    errorHandler.clear()
+                    onRetry?()
+                },
                 onNavigateHome: onNavigateHome
             )
         } else {
@@ -85,8 +89,9 @@ extension View {
     /// Wraps a screen in an error boundary with retry + optional home navigation.
     func errorBoundary(
         handler: ScreenErrorHandler,
+        onRetry: (() -> Void)? = nil,
         onNavigateHome: (() -> Void)? = nil
     ) -> some View {
-        modifier(ErrorBoundary(errorHandler: handler, onNavigateHome: onNavigateHome))
+        modifier(ErrorBoundary(errorHandler: handler, onRetry: onRetry, onNavigateHome: onNavigateHome))
     }
 }

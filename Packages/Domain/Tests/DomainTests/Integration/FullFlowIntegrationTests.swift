@@ -19,7 +19,6 @@ private final class IntegrationMockNetworkClient: NetworkClientProtocol, @unchec
     var recordedRequests: [HTTPRequest] = []
 
     func request<T: Decodable & Sendable>(_ request: HTTPRequest) async throws -> T {
-        recordedRequests.append(request)
         let (data, _) = try await requestData(request)
         return try JSONDecoder().decode(T.self, from: data)
     }
@@ -318,7 +317,7 @@ struct EventOrchestrationIntegrationTests {
 // MARK: - 3. Offline Flow Tests
 // ============================================================
 
-@Suite("Integration: Offline Flow")
+@Suite("Integration: Offline Flow", .serialized)
 struct OfflineFlowIntegrationTests {
 
     @Test("MutationQueue → SyncEngine processes successfully")
