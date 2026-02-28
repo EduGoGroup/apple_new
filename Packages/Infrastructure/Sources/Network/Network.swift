@@ -484,22 +484,6 @@ public actor NetworkClient: NetworkClientProtocol {
         return errorResponse.message ?? errorResponse.error
     }
 
-    /// Describe un error de decodificación de forma legible.
-    private func describeDecodingError(_ error: DecodingError) -> String {
-        switch error {
-        case .typeMismatch(let type, let context):
-            return "Type mismatch for \(type) at \(context.codingPath.map(\.stringValue).joined(separator: "."))"
-        case .valueNotFound(let type, let context):
-            return "Value not found for \(type) at \(context.codingPath.map(\.stringValue).joined(separator: "."))"
-        case .keyNotFound(let key, let context):
-            return "Key '\(key.stringValue)' not found at \(context.codingPath.map(\.stringValue).joined(separator: "."))"
-        case .dataCorrupted(let context):
-            return "Data corrupted at \(context.codingPath.map(\.stringValue).joined(separator: ".")): \(context.debugDescription)"
-        @unknown default:
-            return error.localizedDescription
-        }
-    }
-
     // MARK: - Logging
 
     private func logRequest(_ request: URLRequest) {

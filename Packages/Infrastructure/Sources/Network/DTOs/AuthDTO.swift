@@ -85,16 +85,33 @@ public struct StoredAuthToken: Codable, Sendable, Equatable {
     public let accessToken: String
     public let refreshToken: String
     public let expiresIn: Int
+    public let issuedAt: Date
 
-    public init(accessToken: String, refreshToken: String, expiresIn: Int) {
+    /// `true` si el token ya superó su tiempo de vida.
+    public var isExpired: Bool {
+        Date().timeIntervalSince(issuedAt) >= Double(expiresIn)
+    }
+
+    public init(accessToken: String, refreshToken: String, expiresIn: Int, issuedAt: Date = Date()) {
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         self.expiresIn = expiresIn
+        self.issuedAt = issuedAt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        accessToken = try container.decode(String.self, forKey: .accessToken)
+        refreshToken = try container.decode(String.self, forKey: .refreshToken)
+        expiresIn = try container.decode(Int.self, forKey: .expiresIn)
+        // Dato nuevo: si falta en payloads antiguos, se asume emitido ahora.
+        issuedAt = try container.decodeIfPresent(Date.self, forKey: .issuedAt) ?? Date()
     }
 
     enum CodingKeys: String, CodingKey {
         case accessToken = "access_token"
         case refreshToken = "refresh_token"
         case expiresIn = "expires_in"
+        case issuedAt = "issued_at"
     }
 }

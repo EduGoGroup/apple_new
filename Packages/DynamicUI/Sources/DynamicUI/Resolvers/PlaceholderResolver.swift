@@ -73,9 +73,7 @@ public struct PlaceholderResolver: Sendable {
         }
 
         // Date placeholders
-        let formatter = DateFormatter()
-        formatter.dateStyle = .long
-        result = safeReplace(result, token: "{today_date}", with: formatter.string(from: Date()))
+        result = safeReplace(result, token: "{today_date}", with: Date().formatted(date: .long, time: .omitted))
         result = safeReplace(
             result,
             token: "{current_year}",

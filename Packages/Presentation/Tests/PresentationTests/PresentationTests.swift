@@ -3,7 +3,7 @@ import Testing
 
 @Suite
 struct PresentationTests {
-    @Test func placeholder() {
-        #expect(true)
+    @Test func presentationModuleLoads() {
+        #expect(EduPresentation.version == "2.0.0")
     }
 }

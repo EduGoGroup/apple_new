@@ -272,7 +272,6 @@ struct ResponseTypesTests {
         }
 
         let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
         let response = try decoder.decode(PaginatedResponse<TestItem>.self, from: json)
 
         #expect(response.items.count == 3)

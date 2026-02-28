@@ -3,9 +3,6 @@ import OSLog
 import EduModels
 import EduNetwork
 
-/// Typealias para desambiguar JSONValue entre EduModels y EduNetwork.
-public typealias DynamicJSONValue = EduModels.JSONValue
-
 /// Resultado de una carga de datos con indicador de frescura.
 public struct DataLoadResult: Sendable {
     /// Los datos cargados.
