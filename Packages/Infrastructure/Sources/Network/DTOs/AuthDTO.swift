@@ -99,6 +99,15 @@ public struct StoredAuthToken: Codable, Sendable, Equatable {
         self.issuedAt = issuedAt
     }
 
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        accessToken = try container.decode(String.self, forKey: .accessToken)
+        refreshToken = try container.decode(String.self, forKey: .refreshToken)
+        expiresIn = try container.decode(Int.self, forKey: .expiresIn)
+        // Dato nuevo: si falta en payloads antiguos, se asume emitido ahora.
+        issuedAt = try container.decodeIfPresent(Date.self, forKey: .issuedAt) ?? Date()
+    }
+
     enum CodingKeys: String, CodingKey {
         case accessToken = "access_token"
         case refreshToken = "refresh_token"
