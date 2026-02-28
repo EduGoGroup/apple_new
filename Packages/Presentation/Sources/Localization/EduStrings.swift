@@ -19,6 +19,11 @@ public enum EduStrings {
     public static let close = String(localized: "action.close", defaultValue: "Cerrar")
     public static let confirm = String(localized: "action.confirm", defaultValue: "Confirmar")
     public static let logout = String(localized: "action.logout", defaultValue: "Cerrar sesión")
+    public static let undo = String(localized: "action.undo", defaultValue: "Deshacer")
+
+    // MARK: - Messages
+
+    public static let itemDeleted = String(localized: "message.itemDeleted", defaultValue: "Elemento eliminado")
 
     // MARK: - Connectivity
 
@@ -54,4 +59,15 @@ public enum EduStrings {
     public static let settings = String(localized: "nav.settings", defaultValue: "Configuración")
     public static let dashboard = String(localized: "nav.dashboard", defaultValue: "Inicio")
     public static let selectSchool = String(localized: "nav.selectSchool", defaultValue: "Seleccionar escuela")
+    public static let noSchool = String(localized: "nav.noSchool", defaultValue: "Sin escuela")
+
+    // MARK: - Form Validation
+
+    public static let fieldRequired = String(localized: "form.fieldRequired", defaultValue: "Este campo es obligatorio")
+    public static let fixErrors = String(localized: "form.fixErrors", defaultValue: "Corrige los campos marcados")
+
+    // MARK: - Select
+
+    public static let selectLoading = String(localized: "select.loading", defaultValue: "Cargando...")
+    public static let selectLoadError = String(localized: "select.loadError", defaultValue: "Error al cargar opciones")
 }

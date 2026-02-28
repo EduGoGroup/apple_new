@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import EduModels
 
 /// Informacion de usuario para resolucion de placeholders.
@@ -30,7 +31,15 @@ public struct ContextPlaceholderInfo: Sendable {
 }
 
 /// Reemplaza placeholders {_} en strings con valores del contexto.
+///
+/// Resolution is defensive: if an individual token fails to resolve,
+/// it is left as-is in the output string rather than causing a crash.
 public struct PlaceholderResolver: Sendable {
+    private static let logger = os.Logger(
+        subsystem: "com.edugo.dynamicui",
+        category: "PlaceholderResolver"
+    )
+
     public let userInfo: UserPlaceholderInfo
     public let contextInfo: ContextPlaceholderInfo
     public let glossaryData: [String: String]
@@ -41,39 +50,58 @@ public struct PlaceholderResolver: Sendable {
         self.glossaryData = glossaryData
     }
 
-    /// Reemplaza placeholders en un string.
+    /// Reemplaza placeholders en un string de forma defensiva.
+    ///
+    /// Si un token individual no puede resolverse, se deja tal cual en el resultado.
     public func resolve(_ text: String, itemData: [String: JSONValue]? = nil) -> String {
         var result = text
 
         // User placeholders
-        result = result.replacingOccurrences(of: "{user.firstName}", with: userInfo.firstName)
-        result = result.replacingOccurrences(of: "{user.lastName}", with: userInfo.lastName)
-        result = result.replacingOccurrences(of: "{user.email}", with: userInfo.email)
-        result = result.replacingOccurrences(of: "{user.fullName}", with: userInfo.fullName)
+        result = safeReplace(result, token: "{user.firstName}", with: userInfo.firstName)
+        result = safeReplace(result, token: "{user.lastName}", with: userInfo.lastName)
+        result = safeReplace(result, token: "{user.email}", with: userInfo.email)
+        result = safeReplace(result, token: "{user.fullName}", with: userInfo.fullName)
 
         // Context placeholders
-        result = result.replacingOccurrences(of: "{context.roleName}", with: contextInfo.roleName)
-        result = result.replacingOccurrences(of: "{context.schoolName}", with: contextInfo.schoolName ?? "")
-        result = result.replacingOccurrences(of: "{context.academicUnitName}", with: contextInfo.academicUnitName ?? "")
+        result = safeReplace(result, token: "{context.roleName}", with: contextInfo.roleName)
+        result = safeReplace(result, token: "{context.schoolName}", with: contextInfo.schoolName ?? "")
+        result = safeReplace(result, token: "{context.academicUnitName}", with: contextInfo.academicUnitName ?? "")
 
         // Glossary placeholders {glossary.*}
         for (key, value) in glossaryData {
-            result = result.replacingOccurrences(of: "{glossary.\(key)}", with: value)
+            result = safeReplace(result, token: "{glossary.\(key)}", with: value)
         }
 
         // Date placeholders
-        let formatter = DateFormatter()
-        formatter.dateStyle = .long
-        result = result.replacingOccurrences(of: "{today_date}", with: formatter.string(from: Date()))
-        result = result.replacingOccurrences(of: "{current_year}", with: String(Calendar.current.component(.year, from: Date())))
+        do {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .long
+            result = safeReplace(result, token: "{today_date}", with: formatter.string(from: Date()))
+            result = safeReplace(
+                result,
+                token: "{current_year}",
+                with: String(Calendar.current.component(.year, from: Date()))
+            )
+        }
 
         // Item data placeholders {item.fieldName}
         if let itemData {
             for (key, value) in itemData {
-                result = result.replacingOccurrences(of: "{item.\(key)}", with: value.stringRepresentation)
+                result = safeReplace(result, token: "{item.\(key)}", with: value.stringRepresentation)
             }
         }
 
         return result
+    }
+
+    /// Safely replaces a token in the text. If replacement fails for any reason,
+    /// the original text is returned unchanged and a warning is logged.
+    private func safeReplace(_ text: String, token: String, with replacement: String) -> String {
+        guard text.contains(token) else { return text }
+        let replaced = text.replacingOccurrences(of: token, with: replacement)
+        if replaced == text {
+            Self.logger.error("[PlaceholderResolver] Failed to replace token '\(token)'")
+        }
+        return replaced
     }
 }

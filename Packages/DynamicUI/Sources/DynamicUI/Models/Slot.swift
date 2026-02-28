@@ -16,9 +16,15 @@ public struct Slot: Codable, Sendable, Identifiable {
     public let style: String?
     public let width: String?
     public let weight: Double?
+    public let optionsEndpoint: String?
+    public let optionLabel: String?
+    public let optionValue: String?
 
     enum CodingKeys: String, CodingKey {
         case id, controlType, bind, field, label, value, placeholder, icon
         case required, readOnly, style, width, weight
+        case optionsEndpoint = "options_endpoint"
+        case optionLabel = "option_label"
+        case optionValue = "option_value"
     }
 }

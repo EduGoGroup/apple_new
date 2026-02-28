@@ -129,6 +129,64 @@ public actor SyncService {
         }
     }
 
+    // MARK: - Selective Bucket Sync
+
+    /// Ejecuta una sincronizacion parcial solicitando solo los buckets indicados.
+    ///
+    /// Construye `GET /api/v1/sync/bundle?buckets=menu,permissions,...`
+    /// El bundle parcial se mergea con el bundle local existente,
+    /// preservando los buckets no solicitados.
+    ///
+    /// - Parameter buckets: Buckets a solicitar al backend.
+    /// - Returns: El `UserDataBundle` resultante (merge de parcial + local).
+    /// - Throws: `SyncError` si la operacion falla.
+    @discardableResult
+    public func syncBuckets(_ buckets: [SyncBucket]) async throws -> UserDataBundle {
+        transition(to: .syncing)
+
+        do {
+            let url = "\(apiConfig.iamBaseURL)/api/v1/sync/bundle"
+            var httpRequest = HTTPRequest.get(url)
+
+            if !buckets.isEmpty {
+                let bucketNames = buckets.map(\.rawValue).joined(separator: ",")
+                httpRequest = httpRequest.queryParam("buckets", bucketNames)
+            }
+
+            let response: SyncBundleResponseDTO = try await networkClient.request(httpRequest)
+
+            let partialBundle = UserDataBundle(
+                menu: response.menu,
+                permissions: response.permissions,
+                screens: response.screens,
+                availableContexts: response.availableContexts,
+                hashes: response.hashes,
+                glossary: response.glossary ?? [:],
+                strings: response.strings ?? [:],
+                syncedAt: Date()
+            )
+
+            let bucketNames = Set(buckets.map(\.rawValue))
+            let merged = await localStore.mergePartial(
+                incoming: partialBundle,
+                receivedBuckets: bucketNames
+            )
+
+            try await localStore.save(bundle: merged)
+            currentBundle = merged
+            transition(to: .completed)
+
+            return merged
+        } catch let error as SyncError {
+            transition(to: .error(error))
+            throw error
+        } catch {
+            let syncError = SyncError.networkFailure(error.localizedDescription)
+            transition(to: .error(syncError))
+            throw syncError
+        }
+    }
+
     // MARK: - Delta Sync
 
     /// Ejecuta una sincronización incremental enviando hashes actuales al backend.
@@ -147,13 +205,20 @@ public actor SyncService {
             let requestBody = DeltaSyncRequestDTO(hashes: currentHashes)
             let response: DeltaSyncResponseDTO = try await networkClient.post(url, body: requestBody)
 
-            // Aplicar buckets cambiados al store local
-            for (bucketName, bucketData) in response.changed {
-                try await localStore.updateBucket(
-                    name: bucketName,
-                    data: bucketData.data,
-                    hash: bucketData.hash
-                )
+            // Aplicar buckets cambiados al store local en paralelo.
+            // LocalSyncStore es un actor, así que las llamadas ya son thread-safe.
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                for (bucketName, bucketData) in response.changed {
+                    let store = localStore
+                    group.addTask {
+                        try await store.updateBucket(
+                            name: bucketName,
+                            data: bucketData.data,
+                            hash: bucketData.hash
+                        )
+                    }
+                }
+                try await group.waitForAll()
             }
 
             // Actualizar bundle en memoria desde el store

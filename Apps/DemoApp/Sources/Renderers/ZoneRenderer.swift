@@ -11,9 +11,41 @@ struct ZoneRenderer: View {
     var fieldValues: Binding<[String: String]>?
     let onAction: (ActionDefinition) -> Void
     var onEvent: ((String) -> Void)? = nil
+    var selectOptions: [String: SelectOptionsState]? = nil
+    var onLoadSelectOptions: ((String, String, String, String) async -> Void)? = nil
+
+    @State private var zoneError: String?
 
     var body: some View {
         zoneContent
+            .zoneErrorBoundary(zoneName: zone.id, errorMessage: $zoneError)
+            .onAppear {
+                zoneError = Self.validateZone(zone, data: data)
+            }
+    }
+
+    /// Pre-validates zone data integrity before rendering.
+    /// Returns nil if valid, or an error message describing the issue.
+    static func validateZone(_ zone: Zone, data: [String: EduModels.JSONValue]?) -> String? {
+        // Zone must have either slots or child zones
+        let hasSlots = zone.slots != nil && !(zone.slots!.isEmpty)
+        let hasChildZones = zone.zones != nil && !(zone.zones!.isEmpty)
+        let hasItemLayout = zone.itemLayout != nil
+
+        if !hasSlots && !hasChildZones && !hasItemLayout {
+            return "Zona sin contenido (sin slots ni zonas hijas)"
+        }
+
+        // Validate slots have known control types (already enforced by Codable, but check for empty IDs)
+        if let slots = zone.slots {
+            for slot in slots {
+                if slot.id.isEmpty {
+                    return "Slot con ID vacío detectado"
+                }
+            }
+        }
+
+        return nil
     }
 
     @ViewBuilder
@@ -95,7 +127,9 @@ struct ZoneRenderer: View {
                     actions: actions,
                     fieldValues: fieldValues,
                     onAction: onAction,
-                    onEvent: onEvent
+                    onEvent: onEvent,
+                    selectOptions: selectOptions,
+                    onLoadSelectOptions: onLoadSelectOptions
                 )
             }
         }
@@ -109,7 +143,9 @@ struct ZoneRenderer: View {
                     actions: actions,
                     fieldValues: fieldValues,
                     onAction: onAction,
-                    onEvent: onEvent
+                    onEvent: onEvent,
+                    selectOptions: selectOptions,
+                    onLoadSelectOptions: onLoadSelectOptions
                 )
             }
         }
@@ -125,7 +161,9 @@ struct ZoneRenderer: View {
                     slotData: slotData,
                     actions: actions,
                     onAction: onAction,
-                    onEvent: onEvent
+                    onEvent: onEvent,
+                    selectOptions: selectOptions,
+                    onLoadSelectOptions: onLoadSelectOptions
                 )
             }
         }

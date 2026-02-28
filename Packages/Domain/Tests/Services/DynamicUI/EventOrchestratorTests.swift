@@ -296,4 +296,80 @@ struct EventOrchestratorTests {
             #expect(Bool(false), "Expected navigateTo result")
         }
     }
+
+    @Test("Delete event returns pendingDelete instead of executing HTTP DELETE")
+    @MainActor
+    func deleteReturnsPendingDelete() async {
+        let registry = ContractRegistry()
+        registry.register(SchoolCrudContract())
+        let client = MockNetworkClient()
+        let loader = DataLoader(
+            networkClient: client,
+            adminBaseURL: "https://admin.test",
+            mobileBaseURL: "https://mobile.test"
+        )
+        let orchestrator = EventOrchestrator(
+            registry: registry,
+            networkClient: client,
+            dataLoader: loader
+        )
+        let context = EventContext(
+            screenKey: "schools-crud",
+            userContext: ScreenUserContext(
+                roleId: "1",
+                roleName: "admin",
+                permissions: ["schools:delete"]
+            ),
+            selectedItem: ["id": .string("school-99")]
+        )
+        let result = await orchestrator.execute(event: .delete, context: context)
+        if case .pendingDelete(let screenKey, let itemId, let endpoint, let method) = result {
+            #expect(screenKey == "schools-crud")
+            #expect(itemId == "school-99")
+            #expect(endpoint.contains("/api/v1/schools/school-99"))
+            #expect(method == "DELETE")
+        } else {
+            #expect(Bool(false), "Expected pendingDelete result, got: \(result)")
+        }
+
+        // Verify the mock network client was NOT called (no HTTP request made)
+        let requestMade = await client.lastRequest
+        #expect(requestMade == nil)
+    }
+
+    @Test("Delete event returns pendingDelete with empty itemId when no id in selectedItem")
+    @MainActor
+    func deleteWithoutItemId() async {
+        let registry = ContractRegistry()
+        registry.register(SchoolCrudContract())
+        let client = MockNetworkClient()
+        let loader = DataLoader(
+            networkClient: client,
+            adminBaseURL: "https://admin.test",
+            mobileBaseURL: "https://mobile.test"
+        )
+        let orchestrator = EventOrchestrator(
+            registry: registry,
+            networkClient: client,
+            dataLoader: loader
+        )
+        // No selectedItem with id means endpoint resolution may fail
+        let context = EventContext(
+            screenKey: "schools-crud",
+            userContext: ScreenUserContext(
+                roleId: "1",
+                roleName: "admin",
+                permissions: ["schools:delete"]
+            ),
+            selectedItem: [:]
+        )
+        let result = await orchestrator.execute(event: .delete, context: context)
+        // The endpoint resolution for delete requires an id.
+        // BaseCrudContract returns nil endpoint when no id is present.
+        if case .error(let message, _) = result {
+            #expect(message.contains("No endpoint"))
+        } else {
+            #expect(Bool(false), "Expected error for missing id, got: \(result)")
+        }
+    }
 }

@@ -10,4 +10,5 @@ public enum EventResult: Sendable {
     case cancelled
     case noOp
     case submitTo(endpoint: String, method: String, fieldValues: [String: JSONValue])
+    case pendingDelete(screenKey: String, itemId: String, endpoint: String, method: String = "DELETE")
 }
