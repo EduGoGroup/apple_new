@@ -1,8 +1,18 @@
+import EduCore
 import EduDynamicUI
 import EduDomain
 import EduModels
 import EduNetwork
+import EduPresentation
 import Observation
+
+/// Tracks the info needed to execute or cancel a pending delete operation.
+struct PendingDeleteInfo: Sendable {
+    let screenKey: String
+    let itemId: String
+    let endpoint: String
+    let method: String
+}
 
 @MainActor
 @Observable
@@ -10,6 +20,7 @@ final class DynamicScreenViewModel {
     private let screenLoader: ScreenLoader
     private let dataLoader: DataLoader
     private let orchestrator: EventOrchestrator?
+    private let networkClient: (any NetworkClientProtocol)?
 
     private(set) var screenState: ScreenState = .loading
     private(set) var dataState: DataState = .idle
@@ -25,6 +36,15 @@ final class DynamicScreenViewModel {
     var fieldErrors: [String: String] = [:]
     var searchQuery: String?
 
+    // MARK: - Pending Delete State
+
+    private(set) var pendingDeleteInfo: PendingDeleteInfo?
+    private var pendingDeleteTask: Task<Void, Never>?
+
+    // MARK: - Remote Select State
+
+    var selectOptions: [String: SelectOptionsState] = [:]
+
     var isEditing: Bool {
         if case .success(let items, _, _) = dataState, !items.isEmpty {
             return true
@@ -39,11 +59,13 @@ final class DynamicScreenViewModel {
     init(
         screenLoader: ScreenLoader,
         dataLoader: DataLoader,
-        orchestrator: EventOrchestrator? = nil
+        orchestrator: EventOrchestrator? = nil,
+        networkClient: (any NetworkClientProtocol)? = nil
     ) {
         self.screenLoader = screenLoader
         self.dataLoader = dataLoader
         self.orchestrator = orchestrator
+        self.networkClient = networkClient
     }
 
     func loadScreen(key: String) async {
@@ -203,6 +225,107 @@ final class DynamicScreenViewModel {
         }
     }
 
+    // MARK: - Remote Select
+
+    func loadSelectOptions(
+        fieldKey: String,
+        endpoint: String,
+        labelField: String,
+        valueField: String
+    ) async {
+        if let current = selectOptions[fieldKey] {
+            switch current {
+            case .loading, .success:
+                return
+            case .error:
+                break // Allow retry
+            }
+        }
+
+        selectOptions[fieldKey] = .loading
+
+        do {
+            let raw = try await dataLoader.loadData(
+                endpoint: endpoint,
+                config: nil
+            )
+            let items = extractItems(from: raw)
+            let options: [SlotOption] = items.compactMap { item in
+                guard let label = item[labelField]?.stringValue,
+                      let value = item[valueField]?.stringValue else { return nil }
+                return SlotOption(label: label, value: value)
+            }
+            selectOptions[fieldKey] = .success(options: options)
+        } catch {
+            selectOptions[fieldKey] = .error(message: error.localizedDescription)
+        }
+    }
+
+    // MARK: - Pending Delete
+
+    /// Schedules a pending delete that executes after a 5-second delay.
+    /// During that time the user can cancel via `cancelPendingDelete()`.
+    func schedulePendingDelete(info: PendingDeleteInfo) {
+        // Cancel any existing pending delete
+        pendingDeleteTask?.cancel()
+        pendingDeleteInfo = info
+
+        // Remove the item from the current list immediately for visual feedback
+        if case .success(var items, let hasMore, let loadingMore) = dataState {
+            items.removeAll { item in
+                item["id"]?.stringValue == info.itemId
+            }
+            dataState = .success(items: items, hasMore: hasMore, loadingMore: loadingMore)
+        }
+
+        // Show undoable toast
+        ToastManager.shared.showUndoable(
+            message: EduStrings.itemDeleted,
+            onUndo: { [weak self] in
+                self?.cancelPendingDelete()
+            }
+        )
+
+        // Schedule the actual DELETE after 5 seconds
+        pendingDeleteTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled else { return }
+            await self?.executePendingDelete()
+        }
+    }
+
+    /// Cancels the pending delete and restores the item by refreshing data.
+    func cancelPendingDelete() {
+        pendingDeleteTask?.cancel()
+        pendingDeleteTask = nil
+        pendingDeleteInfo = nil
+        // Refresh data to restore the item
+        Task { await refresh() }
+    }
+
+    /// Executes the real HTTP DELETE for the pending delete.
+    private func executePendingDelete() async {
+        guard let info = pendingDeleteInfo else { return }
+        pendingDeleteInfo = nil
+        pendingDeleteTask = nil
+
+        guard let networkClient else {
+            alertMessage = "No network client configured for delete"
+            return
+        }
+
+        do {
+            let request = HTTPRequest.delete(info.endpoint)
+            let _: EmptyResponse = try await networkClient.request(request)
+            // Refresh to ensure list is up-to-date after server confirms deletion
+            await refresh()
+        } catch {
+            alertMessage = error.localizedDescription
+            // Refresh to restore the item since delete failed
+            await refresh()
+        }
+    }
+
     // MARK: - Private
 
     private func handleResult(_ result: EventResult) {
@@ -238,6 +361,13 @@ final class DynamicScreenViewModel {
             } else {
                 alertMessage = "Submit: \(method) \(endpoint)"
             }
+        case .pendingDelete(let screenKey, let itemId, let endpoint, let method):
+            schedulePendingDelete(info: PendingDeleteInfo(
+                screenKey: screenKey,
+                itemId: itemId,
+                endpoint: endpoint,
+                method: method
+            ))
         case .cancelled, .noOp:
             break
         }

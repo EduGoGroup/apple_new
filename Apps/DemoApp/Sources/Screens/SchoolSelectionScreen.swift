@@ -43,13 +43,13 @@ struct SchoolSelectionScreen: View {
                     contextsSection
                 }
             }
-            .navigationTitle("Seleccionar escuela")
+            .navigationTitle(EduStrings.selectSchool)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cerrar") { dismiss() }
+                    Button(EduStrings.close) { dismiss() }
                 }
             }
         }
@@ -69,7 +69,7 @@ struct SchoolSelectionScreen: View {
                         .foregroundStyle(isCurrentContext(context) ? Color.accentColor : .secondary)
 
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.xs) {
-                        Text(context.schoolName ?? "Sin escuela")
+                        Text(context.schoolName ?? EduStrings.noSchool)
                             .font(.body)
                             .foregroundStyle(.primary)
 
@@ -89,7 +89,7 @@ struct SchoolSelectionScreen: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(context.schoolName ?? "Sin escuela"), \(context.roleName)")
+            .accessibilityLabel("\(context.schoolName ?? EduStrings.noSchool), \(context.roleName)")
             .accessibilityAddTraits(isCurrentContext(context) ? .isSelected : [])
         }
     }

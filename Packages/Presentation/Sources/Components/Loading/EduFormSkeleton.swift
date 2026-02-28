@@ -2,34 +2,29 @@
 // EduPresentation
 //
 // Pattern-specific skeleton loader for form screens.
+// Fase B: 3 field groups with label (30% width, 14pt) + input (100% width, 44pt).
 
 import SwiftUI
 
 /// Skeleton loader that simulates a form with label + input field pairs.
 ///
-/// Uses existing `EduSkeletonLoader` and `ShimmerEffect`.
+/// Each group: label skeleton (30% width, 14pt) + input skeleton (100% width, 44pt).
+/// No internal padding - the parent container handles padding (PR #19 fix).
 @MainActor
 public struct EduFormSkeleton: View {
     private let fieldCount: Int
 
-    public init(fieldCount: Int = 5) {
+    public init(fieldCount: Int = 3) {
         self.fieldCount = fieldCount
     }
 
     public var body: some View {
         EduSkeletonGroup {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xl) {
-                ForEach(0..<fieldCount, id: \.self) { index in
-                    formFieldSkeleton(widthFraction: labelWidth(for: index))
+                ForEach(0..<fieldCount, id: \.self) { _ in
+                    formFieldSkeleton
                 }
-
-                // Save button
-                EduSkeletonLoader(shape: .roundedRectangle(DesignTokens.CornerRadius.medium))
-                    .frame(height: 44)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, DesignTokens.Spacing.medium)
             }
-            .padding()
         }
         .accessibilityLabel("Loading form")
         .accessibilityAddTraits(.updatesFrequently)
@@ -37,23 +32,20 @@ public struct EduFormSkeleton: View {
 
     // MARK: - Private
 
-    @ViewBuilder
-    private func formFieldSkeleton(widthFraction: CGFloat) -> some View {
+    private var formFieldSkeleton: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.small) {
-            // Label
-            EduSkeletonLoader(shape: .capsule)
-                .frame(height: 12)
-                .frame(maxWidth: 120 * widthFraction)
+            // Label skeleton (30% width, 14pt height)
+            GeometryReader { geo in
+                EduSkeletonLoader(shape: .capsule)
+                    .frame(width: geo.size.width * 0.3, height: 14)
+            }
+            .frame(height: 14)
 
-            // Input field
+            // Input skeleton (100% width, 44pt height)
             EduSkeletonLoader(shape: .roundedRectangle(DesignTokens.CornerRadius.medium))
-                .frame(height: 40)
+                .frame(height: 44)
+                .frame(maxWidth: .infinity)
         }
-    }
-
-    private func labelWidth(for index: Int) -> CGFloat {
-        let widths: [CGFloat] = [0.8, 1.0, 0.6, 0.9, 0.7, 0.85]
-        return widths[index % widths.count]
     }
 }
 
@@ -61,8 +53,10 @@ public struct EduFormSkeleton: View {
 
 #Preview("Form Skeleton") {
     EduFormSkeleton()
+        .padding()
 }
 
-#Preview("Form Skeleton 3 fields") {
-    EduFormSkeleton(fieldCount: 3)
+#Preview("Form Skeleton 5 fields") {
+    EduFormSkeleton(fieldCount: 5)
+        .padding()
 }

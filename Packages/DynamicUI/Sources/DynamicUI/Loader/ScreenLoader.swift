@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import EduNetwork
 import EduModels
 
@@ -11,6 +12,7 @@ public actor ScreenLoader {
     private var bundleVersions: [String: String] = [:]
     private let maxCacheSize: Int
     private let defaultTTL: TimeInterval
+    private let logger: os.Logger?
 
     /// Entrada de cache para una pantalla.
     public struct CachedScreen: Sendable {
@@ -25,12 +27,14 @@ public actor ScreenLoader {
         networkClient: NetworkClientProtocol,
         baseURL: String,
         maxCacheSize: Int = 20,
-        cacheExpiration: TimeInterval = 3600
+        cacheExpiration: TimeInterval = 3600,
+        logger: os.Logger? = nil
     ) {
         self.networkClient = networkClient
         self.baseURL = baseURL
         self.maxCacheSize = maxCacheSize
         self.defaultTTL = cacheExpiration
+        self.logger = logger
     }
 
     // MARK: - Seed from Sync Bundle
@@ -40,51 +44,92 @@ public actor ScreenLoader {
     /// Converts each `ScreenBundleDTO` into a `ScreenDefinition` and stores it
     /// in the memory cache with pattern-based TTL. Screens with zero TTL
     /// (e.g. login) are skipped.
-    public func seedFromBundle(screens: [String: ScreenBundleDTO]) {
-        let encoder = JSONEncoder()
-        let decoder = JSONDecoder()
+    ///
+    /// Screen serialization/deserialization runs in parallel via `withTaskGroup`
+    /// for improved performance with large bundles.
+    public func seedFromBundle(screens: [String: ScreenBundleDTO]) async {
+        // Capture defaultTTL for use in child tasks (value type, safe to capture)
+        let capturedDefaultTTL = defaultTTL
 
-        for (key, bundleDTO) in screens {
-            guard let pattern = ScreenPattern(rawValue: bundleDTO.pattern) else {
-                continue
+        let results = await withTaskGroup(
+            of: (String, ScreenDefinition, String, TimeInterval)?.self
+        ) { group in
+            for (key, bundleDTO) in screens {
+                group.addTask {
+                    guard let pattern = ScreenPattern(rawValue: bundleDTO.pattern) else {
+                        return nil
+                    }
+
+                    let patternTTL = Self.effectiveTTLStatic(
+                        for: pattern,
+                        defaultTTL: capturedDefaultTTL
+                    )
+                    guard patternTTL > 0 else { return nil }
+
+                    let encoder = JSONEncoder()
+                    let decoder = JSONDecoder()
+
+                    guard let templateData = try? encoder.encode(bundleDTO.template),
+                          let template = try? decoder.decode(ScreenTemplate.self, from: templateData) else {
+                        return nil
+                    }
+
+                    let slotData: [String: JSONValue]? = bundleDTO.slotData?.objectValue
+                    let versionInt = Int(bundleDTO.version.split(separator: ".").first ?? "0") ?? 0
+
+                    let screen = ScreenDefinition(
+                        screenId: bundleDTO.screenKey,
+                        screenKey: bundleDTO.screenKey,
+                        screenName: bundleDTO.screenName,
+                        pattern: pattern,
+                        version: versionInt,
+                        template: template,
+                        slotData: slotData,
+                        dataEndpoint: nil,
+                        dataConfig: nil,
+                        actions: [],
+                        handlerKey: bundleDTO.handlerKey,
+                        updatedAt: ""
+                    )
+
+                    return (key, screen, bundleDTO.version, patternTTL)
+                }
             }
 
-            let patternTTL = effectiveTTL(for: pattern)
-            guard patternTTL > 0 else { continue }
-
-            guard let templateData = try? encoder.encode(bundleDTO.template),
-                  let template = try? decoder.decode(ScreenTemplate.self, from: templateData) else {
-                continue
+            var collected: [(String, ScreenDefinition, String, TimeInterval)] = []
+            for await result in group {
+                if let entry = result {
+                    collected.append(entry)
+                }
             }
+            return collected
+        }
 
-            let slotData: [String: JSONValue]? = bundleDTO.slotData?.objectValue
-
-            let versionInt = Int(bundleDTO.version.split(separator: ".").first ?? "0") ?? 0
-
-            let screen = ScreenDefinition(
-                screenId: bundleDTO.screenKey,
-                screenKey: bundleDTO.screenKey,
-                screenName: bundleDTO.screenName,
-                pattern: pattern,
-                version: versionInt,
-                template: template,
-                slotData: slotData,
-                dataEndpoint: nil,
-                dataConfig: nil,
-                actions: [],
-                handlerKey: bundleDTO.handlerKey,
-                updatedAt: ""
-            )
-
-            let now = Date()
+        let now = Date()
+        for (key, screen, version, patternTTL) in results {
             memoryCache[key] = CachedScreen(
                 screen: screen,
                 cachedAt: now,
                 etag: nil,
                 expiresAt: now.addingTimeInterval(patternTTL),
-                bundleVersion: bundleDTO.version
+                bundleVersion: version
             )
-            bundleVersions[key] = bundleDTO.version
+            bundleVersions[key] = version
+        }
+    }
+
+    /// Pure function to compute TTL for a pattern. Used by child tasks in `seedFromBundle`.
+    private static func effectiveTTLStatic(for pattern: ScreenPattern, defaultTTL: TimeInterval) -> TimeInterval {
+        guard defaultTTL > 0 else { return 0 }
+        switch pattern {
+        case .dashboard: return 60
+        case .list: return 300
+        case .form: return 3600
+        case .detail: return 600
+        case .settings: return 1800
+        case .login: return 0
+        case .search, .profile, .modal, .notification, .onboarding, .emptyState:
+            return 300
         }
     }
 
@@ -115,6 +160,7 @@ public actor ScreenLoader {
         // 1. Check memory cache (if not expired)
         if let cached = memoryCache[key],
            Date() < cached.expiresAt {
+            logger?.debug("[EduGo.Cache.Screen] L1 HIT: \(key, privacy: .public)")
             return cached.screen
         }
 
@@ -128,11 +174,13 @@ public actor ScreenLoader {
         }
 
         // 3. Execute request
+        logger?.debug("[EduGo.Cache.Screen] REMOTE: \(key, privacy: .public)")
         do {
             let (data, response) = try await networkClient.requestData(request)
 
             // 304 Not Modified - return cached
             if response.statusCode == 304, let cached = memoryCache[key] {
+                logger?.debug("[EduGo.Cache.Screen] L1 HIT (revalidated): \(key, privacy: .public)")
                 let patternTTL = effectiveTTL(for: cached.screen.pattern)
                 let now = Date()
                 memoryCache[key] = CachedScreen(
@@ -156,8 +204,10 @@ public actor ScreenLoader {
         } catch {
             // If error and we have stale cache, return it
             if let cached = memoryCache[key] {
+                logger?.debug("[EduGo.Cache.Screen] STALE FALLBACK: \(key, privacy: .public)")
                 return cached.screen
             }
+            logger?.debug("[EduGo.Cache.Screen] MISS: \(key, privacy: .public)")
             throw error
         }
     }

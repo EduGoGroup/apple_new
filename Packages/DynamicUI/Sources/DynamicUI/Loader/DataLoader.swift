@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import EduModels
 import EduNetwork
 
@@ -32,6 +33,9 @@ public actor DataLoader {
     /// Indica si hay conexión de red disponible.
     public private(set) var isOnline: Bool = true
 
+    /// Logger opcional para observabilidad de cache.
+    private let logger: os.Logger?
+
     /// Handler para encolar mutaciones offline.
     /// Inyectado desde la capa Domain ya que DynamicUI no depende de ella.
     public var offlineMutationHandler: (@Sendable (String, String, EduModels.JSONValue) async -> Void)?
@@ -39,11 +43,13 @@ public actor DataLoader {
     public init(
         networkClient: NetworkClientProtocol,
         adminBaseURL: String,
-        mobileBaseURL: String
+        mobileBaseURL: String,
+        logger: os.Logger? = nil
     ) {
         self.networkClient = networkClient
         self.adminBaseURL = adminBaseURL
         self.mobileBaseURL = mobileBaseURL
+        self.logger = logger
     }
 
     // MARK: - Online State
@@ -81,12 +87,15 @@ public actor DataLoader {
         if !isOnline {
             // Offline: retornar desde cache
             if let cached = cache[cacheKey] {
+                logger?.debug("[EduGo.Cache.Data] STALE (offline): \(cacheKey, privacy: .public)")
                 return DataLoadResult(data: cached.data, isStale: true)
             }
+            logger?.debug("[EduGo.Cache.Data] MISS (offline): \(cacheKey, privacy: .public)")
             throw NetworkError.networkFailure(underlyingError: "Sin conexión y sin datos en cache")
         }
 
         // Online: intentar fetch
+        logger?.debug("[EduGo.Cache.Data] REMOTE: \(cacheKey, privacy: .public)")
         do {
             var request = buildRequest(endpoint: endpoint, config: config, offset: 0)
             if let params {
@@ -99,8 +108,10 @@ public actor DataLoader {
         } catch {
             // Fallback a cache si el fetch falla
             if let cached = cache[cacheKey] {
+                logger?.debug("[EduGo.Cache.Data] STALE FALLBACK: \(cacheKey, privacy: .public)")
                 return DataLoadResult(data: cached.data, isStale: true)
             }
+            logger?.debug("[EduGo.Cache.Data] MISS: \(cacheKey, privacy: .public)")
             throw error
         }
     }

@@ -78,13 +78,62 @@ public final class ToastManager: Sendable {
     public func showInfo(_ message: String, duration: TimeInterval = 3.0) {
         show(message, style: .info, duration: duration)
     }
+
+    /// Shows a toast with an undo action button.
+    ///
+    /// The toast auto-dismisses after `duration` seconds. If the user taps
+    /// the action button, the `onUndo` closure is called and the toast is dismissed.
+    ///
+    /// - Parameters:
+    ///   - message: The message to display.
+    ///   - actionLabel: Label for the action button (default: "Deshacer").
+    ///   - onUndo: Closure called when the user taps the undo button.
+    ///   - duration: Auto-dismiss delay in seconds (default: 5).
+    public func showUndoable(
+        message: String,
+        actionLabel: String = EduStrings.undo,
+        onUndo: @escaping @Sendable @MainActor () -> Void,
+        duration: TimeInterval = 5.0
+    ) {
+        let action = ToastAction(label: actionLabel, handler: onUndo)
+        let toast = ToastItem(message: message, style: .info, duration: duration, action: action)
+        withAnimation(.spring(duration: 0.4, bounce: 0.3)) {
+            toasts.append(toast)
+        }
+
+        AccessibilityAnnouncements.announce("Information: \(message)", priority: .medium)
+
+        Task {
+            try? await Task.sleep(for: .seconds(duration))
+            dismiss(toast)
+        }
+    }
+}
+
+/// An optional action button displayed alongside a toast message.
+public struct ToastAction: Sendable {
+    public let label: String
+    public let handler: @Sendable @MainActor () -> Void
+
+    public init(label: String, handler: @escaping @Sendable @MainActor () -> Void) {
+        self.label = label
+        self.handler = handler
+    }
 }
 
 public struct ToastItem: Identifiable, Sendable {
     public let id = UUID()
-    let message: String
-    let style: ToastStyle
-    let duration: TimeInterval
+    public let message: String
+    public let style: ToastStyle
+    public let duration: TimeInterval
+    public let action: ToastAction?
+
+    public init(message: String, style: ToastStyle, duration: TimeInterval, action: ToastAction? = nil) {
+        self.message = message
+        self.style = style
+        self.duration = duration
+        self.action = action
+    }
 }
 
 public struct EduToast: View {
@@ -104,6 +153,18 @@ public struct EduToast: View {
             Text(item.message)
                 .font(.body)
             Spacer()
+            if let action = item.action {
+                Button {
+                    action.handler()
+                    onDismiss()
+                } label: {
+                    Text(action.label)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(item.style.color)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(action.label)
+            }
             Button(action: onDismiss) {
                 Image(systemName: "xmark")
                     .foregroundStyle(.secondary)

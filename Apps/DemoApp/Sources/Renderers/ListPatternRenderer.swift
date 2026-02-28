@@ -39,7 +39,8 @@ struct ListPatternRenderer: View {
     private var contentView: some View {
         switch viewModel.dataState {
         case .idle, .loading:
-            EduLoadingStateView()
+            EduListSkeleton()
+                .padding()
 
         case .error(let message):
             EduErrorStateView(message: message) {
