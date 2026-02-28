@@ -33,7 +33,7 @@ struct RemoteSelectField: View {
 
             case .success(let options):
                 Picker(slot.label ?? "", selection: selection) {
-                    Text(slot.placeholder ?? EduStrings.selectLoading)
+                    Text(slot.placeholder ?? EduStrings.selectPlaceholder)
                         .tag("")
                     ForEach(options, id: \.value) { option in
                         Text(option.label).tag(option.value)

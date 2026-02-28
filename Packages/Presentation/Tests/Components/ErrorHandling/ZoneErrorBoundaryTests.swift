@@ -32,9 +32,8 @@ struct ZoneErrorBoundaryTests {
     @Test("ZoneErrorBoundary modifier can be applied to any View")
     @MainActor
     func boundaryModifierApplies() {
-        @State var error: String? = nil
         let view = Text("Content")
-            .zoneErrorBoundary(zoneName: "test-zone", errorMessage: $error)
+            .zoneErrorBoundary(zoneName: "test-zone", errorMessage: .constant(nil))
         _ = view
     }
 }

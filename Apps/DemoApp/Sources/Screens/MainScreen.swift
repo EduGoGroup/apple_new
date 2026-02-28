@@ -239,9 +239,11 @@ struct MainScreen: View {
             activeUserContext = ScreenUserContext(dto: context)
             selectedItemKey = nil
 
-            // Fase 2: Cargar screens en background
+            // Fase 2: Cargar screens en background y poblar cache
             Task {
-                _ = try? await container.syncService.syncBuckets([.screens])
+                if let bundle = try? await container.syncService.syncBuckets([.screens]) {
+                    await container.screenLoader.seedFromBundle(screens: bundle.screens)
+                }
             }
         } catch {
             // Error silencioso — el usuario permanece en el contexto actual

@@ -33,7 +33,6 @@ public enum EduStrings {
 
     // MARK: - Forms
 
-    public static let requiredField = String(localized: "form.required", defaultValue: "Campo requerido")
     public static let invalidEmail = String(localized: "form.invalidEmail", defaultValue: "Email inválido")
     public static let saveSuccess = String(localized: "form.saveSuccess", defaultValue: "Guardado exitosamente")
     public static let deleteConfirmTitle = String(localized: "form.deleteConfirmTitle", defaultValue: "¿Eliminar?")
@@ -70,4 +69,5 @@ public enum EduStrings {
 
     public static let selectLoading = String(localized: "select.loading", defaultValue: "Cargando...")
     public static let selectLoadError = String(localized: "select.loadError", defaultValue: "Error al cargar opciones")
+    public static let selectPlaceholder = String(localized: "select.placeholder", defaultValue: "Seleccionar...")
 }

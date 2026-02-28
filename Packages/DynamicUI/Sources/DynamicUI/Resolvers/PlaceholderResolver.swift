@@ -73,16 +73,14 @@ public struct PlaceholderResolver: Sendable {
         }
 
         // Date placeholders
-        do {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .long
-            result = safeReplace(result, token: "{today_date}", with: formatter.string(from: Date()))
-            result = safeReplace(
-                result,
-                token: "{current_year}",
-                with: String(Calendar.current.component(.year, from: Date()))
-            )
-        }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        result = safeReplace(result, token: "{today_date}", with: formatter.string(from: Date()))
+        result = safeReplace(
+            result,
+            token: "{current_year}",
+            with: String(Calendar.current.component(.year, from: Date()))
+        )
 
         // Item data placeholders {item.fieldName}
         if let itemData {

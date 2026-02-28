@@ -1,9 +1,12 @@
 import SwiftUI
 
-/// ViewModifier that wraps zone content with error handling.
+/// ViewModifier that wraps zone content with validation-driven error handling.
 ///
-/// When a validation error is detected (via `errorMessage`), displays a
-/// `ZoneErrorPlaceholder` inline instead of the zone content.
+/// **Note**: This is NOT a crash/exception barrier like React error boundaries.
+/// SwiftUI does not support catching exceptions thrown from `body` computations.
+/// Instead, this modifier uses pre-validation: when a non-nil `errorMessage`
+/// binding is provided (populated by `ZoneRenderer.validateZone`), it displays
+/// a `ZoneErrorPlaceholder` inline instead of the zone content.
 /// Supports retry via `retryCount` which forces SwiftUI to re-create
 /// the content view.
 public struct ZoneErrorBoundary: ViewModifier {
