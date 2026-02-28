@@ -245,4 +245,11 @@ public struct PaginatedResponse<T: Decodable & Sendable>: Decodable, Sendable {
         self.page = page
         self.pageSize = pageSize
     }
+
+    enum CodingKeys: String, CodingKey {
+        case items
+        case totalCount = "total_count"
+        case page
+        case pageSize = "page_size"
+    }
 }

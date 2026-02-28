@@ -67,10 +67,13 @@ build:
 	cd $(DEMO_APP_DIR) && EDUGO_ENVIRONMENT=$(ENV) swift build
 	@echo "$(GREEN)✓ Build completado$(RESET)"
 
-## Ejecuta todos los tests del proyecto raiz
+## Ejecuta todos los tests de cada paquete (Packages/ y modulos/)
 test:
 	@echo "$(GREEN)$(BOLD)▶ Ejecutando tests$(RESET)"
-	swift test
+	@for dir in Packages/Foundation Packages/Core Packages/Infrastructure Packages/Domain Packages/DynamicUI Packages/Presentation Packages/Features modulos/CQRSKit modulos/DesignSystemSDK modulos/FormsSDK modulos/FoundationToolkit modulos/LoggerSDK modulos/NetworkSDK modulos/UIComponentsSDK; do \
+		echo "$(CYAN)Testing $$dir$(RESET)"; \
+		(cd $$dir && swift test) || exit 1; \
+	done
 	@echo "$(GREEN)✓ Tests completados$(RESET)"
 
 ## Limpia artefactos de build (raiz y DemoApp)
