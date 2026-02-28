@@ -10,11 +10,6 @@ struct DomainTests {
         #expect(EduDomain.version == "2.0.0")
     }
 
-    @Test func cqrsCommandProtocol() {
-        // Verificar que el protocolo Command está disponible
-        #expect(true)
-    }
-
     @Test func materialTypeAvailable() {
         let videoType = MaterialType.video
         #expect(videoType.rawValue == "video")

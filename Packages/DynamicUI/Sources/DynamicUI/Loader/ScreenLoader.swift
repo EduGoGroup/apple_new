@@ -140,17 +140,7 @@ public actor ScreenLoader {
     /// If `defaultTTL` was set to zero (via `cacheExpiration: 0` in init),
     /// all TTLs resolve to zero, disabling caching entirely.
     private func effectiveTTL(for pattern: ScreenPattern) -> TimeInterval {
-        guard defaultTTL > 0 else { return 0 }
-        switch pattern {
-        case .dashboard: return 60
-        case .list: return 300
-        case .form: return 3600
-        case .detail: return 600
-        case .settings: return 1800
-        case .login: return 0
-        case .search, .profile, .modal, .notification, .onboarding, .emptyState:
-            return 300
-        }
+        Self.effectiveTTLStatic(for: pattern, defaultTTL: defaultTTL)
     }
 
     // MARK: - Load Screen

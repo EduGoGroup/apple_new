@@ -44,6 +44,12 @@ public struct PlaceholderResolver: Sendable {
     public let contextInfo: ContextPlaceholderInfo
     public let glossaryData: [String: String]
 
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .long
+        return f
+    }()
+
     public init(userInfo: UserPlaceholderInfo, contextInfo: ContextPlaceholderInfo, glossaryData: [String: String] = [:]) {
         self.userInfo = userInfo
         self.contextInfo = contextInfo
@@ -73,9 +79,7 @@ public struct PlaceholderResolver: Sendable {
         }
 
         // Date placeholders
-        let formatter = DateFormatter()
-        formatter.dateStyle = .long
-        result = safeReplace(result, token: "{today_date}", with: formatter.string(from: Date()))
+        result = safeReplace(result, token: "{today_date}", with: Self.dateFormatter.string(from: Date()))
         result = safeReplace(
             result,
             token: "{current_year}",

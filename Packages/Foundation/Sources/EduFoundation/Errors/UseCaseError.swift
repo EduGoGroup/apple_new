@@ -221,3 +221,26 @@ public enum UseCaseError: Error, LocalizedError, Sendable {
         }
     }
 }
+
+// MARK: - Equatable
+
+extension UseCaseError: Equatable {
+    public static func == (lhs: UseCaseError, rhs: UseCaseError) -> Bool {
+        switch (lhs, rhs) {
+        case (.preconditionFailed(let l), .preconditionFailed(let r)):
+            return l == r
+        case (.unauthorized(let l), .unauthorized(let r)):
+            return l == r
+        case (.domainError(let l), .domainError(let r)):
+            return l == r
+        case (.repositoryError(let l), .repositoryError(let r)):
+            return l == r
+        case (.executionFailed(let l), .executionFailed(let r)):
+            return l == r
+        case (.timeout, .timeout):
+            return true
+        default:
+            return false
+        }
+    }
+}

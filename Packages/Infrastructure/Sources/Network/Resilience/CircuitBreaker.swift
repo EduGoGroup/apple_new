@@ -104,7 +104,10 @@ public actor CircuitBreaker {
 
             return result
         } catch {
-            recordFailure()
+            // CancellationError should not trip the circuit breaker
+            if !(error is CancellationError) {
+                recordFailure()
+            }
             throw error
         }
     }

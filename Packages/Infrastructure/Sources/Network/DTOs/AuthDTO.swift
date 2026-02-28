@@ -85,16 +85,24 @@ public struct StoredAuthToken: Codable, Sendable, Equatable {
     public let accessToken: String
     public let refreshToken: String
     public let expiresIn: Int
+    public let issuedAt: Date
 
-    public init(accessToken: String, refreshToken: String, expiresIn: Int) {
+    /// `true` si el token ya superó su tiempo de vida.
+    public var isExpired: Bool {
+        Date().timeIntervalSince(issuedAt) >= Double(expiresIn)
+    }
+
+    public init(accessToken: String, refreshToken: String, expiresIn: Int, issuedAt: Date = Date()) {
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         self.expiresIn = expiresIn
+        self.issuedAt = issuedAt
     }
 
     enum CodingKeys: String, CodingKey {
         case accessToken = "access_token"
         case refreshToken = "refresh_token"
         case expiresIn = "expires_in"
+        case issuedAt = "issued_at"
     }
 }
