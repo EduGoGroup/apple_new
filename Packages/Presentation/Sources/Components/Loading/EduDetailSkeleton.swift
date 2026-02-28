@@ -2,50 +2,48 @@
 // EduPresentation
 //
 // Pattern-specific skeleton loader for detail screens.
+// Fase B: Header (title 80% + subtitle 60%) + divider + 3 detail rows (label + value).
 
 import SwiftUI
 
 /// Skeleton loader that simulates a detail view with header and key-value rows.
 ///
-/// Uses existing `EduSkeletonLoader` and `ShimmerEffect`.
+/// Layout: title (80% width, 20pt) + subtitle (60% width, 14pt) + divider + detail rows.
+/// No internal padding - the parent container handles padding (PR #19 fix).
 @MainActor
 public struct EduDetailSkeleton: View {
     private let rowCount: Int
 
-    public init(rowCount: Int = 5) {
+    public init(rowCount: Int = 3) {
         self.rowCount = rowCount
     }
 
     public var body: some View {
         EduSkeletonGroup {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.xl) {
-                // Header: avatar + name
-                HStack(spacing: DesignTokens.Spacing.medium) {
-                    EduSkeletonLoader(shape: .circle)
-                        .frame(width: 56, height: 56)
-
-                    VStack(alignment: .leading, spacing: DesignTokens.Spacing.small) {
+                // Header: title + subtitle
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.small) {
+                    GeometryReader { geo in
                         EduSkeletonLoader(shape: .capsule)
-                            .frame(height: 18)
-                            .frame(maxWidth: 160)
-
-                        EduSkeletonLoader(shape: .capsule)
-                            .frame(height: 12)
-                            .frame(maxWidth: 100)
+                            .frame(width: geo.size.width * 0.8, height: 20)
                     }
+                    .frame(height: 20)
+
+                    GeometryReader { geo in
+                        EduSkeletonLoader(shape: .capsule)
+                            .frame(width: geo.size.width * 0.6, height: 14)
+                    }
+                    .frame(height: 14)
                 }
 
                 // Divider
-                EduSkeletonLoader(shape: .rectangle)
-                    .frame(height: 1)
-                    .opacity(0.3)
+                Divider()
 
-                // Key-value rows
-                ForEach(0..<rowCount, id: \.self) { index in
-                    detailRowSkeleton(labelFraction: labelWidth(for: index))
+                // Detail rows (label + value)
+                ForEach(0..<rowCount, id: \.self) { _ in
+                    detailRowSkeleton
                 }
             }
-            .padding()
         }
         .accessibilityLabel("Loading detail")
         .accessibilityAddTraits(.updatesFrequently)
@@ -53,24 +51,17 @@ public struct EduDetailSkeleton: View {
 
     // MARK: - Private
 
-    @ViewBuilder
-    private func detailRowSkeleton(labelFraction: CGFloat) -> some View {
-        HStack {
+    private var detailRowSkeleton: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.small) {
+            // Label (short)
             EduSkeletonLoader(shape: .capsule)
-                .frame(height: 12)
-                .frame(maxWidth: 90 * labelFraction)
+                .frame(width: 80, height: 12)
 
-            Spacer()
-
+            // Value (full width)
             EduSkeletonLoader(shape: .capsule)
-                .frame(height: 12)
-                .frame(maxWidth: 120)
+                .frame(height: 14)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-    }
-
-    private func labelWidth(for index: Int) -> CGFloat {
-        let widths: [CGFloat] = [0.8, 1.0, 0.7, 0.9, 0.6, 0.85]
-        return widths[index % widths.count]
     }
 }
 
@@ -78,8 +69,10 @@ public struct EduDetailSkeleton: View {
 
 #Preview("Detail Skeleton") {
     EduDetailSkeleton()
+        .padding()
 }
 
-#Preview("Detail Skeleton 3 rows") {
-    EduDetailSkeleton(rowCount: 3)
+#Preview("Detail Skeleton 5 rows") {
+    EduDetailSkeleton(rowCount: 5)
+        .padding()
 }

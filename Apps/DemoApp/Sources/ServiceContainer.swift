@@ -4,6 +4,7 @@ import EduDomain
 import EduDynamicUI
 import EduPresentation
 import Observation
+import OSLog
 
 @MainActor
 @Observable
@@ -102,14 +103,17 @@ final class ServiceContainer {
         self.syncService = syncService
 
         // 8. DynamicUI loaders (usan authenticated client)
+        let cacheLogger = os.Logger(subsystem: "com.edugo.apple", category: "Cache")
         self.screenLoader = ScreenLoader(
             networkClient: authenticatedClient,
-            baseURL: config.mobileBaseURL
+            baseURL: config.mobileBaseURL,
+            logger: cacheLogger
         )
         self.dataLoader = DataLoader(
             networkClient: authenticatedClient,
             adminBaseURL: config.adminBaseURL,
-            mobileBaseURL: config.mobileBaseURL
+            mobileBaseURL: config.mobileBaseURL,
+            logger: cacheLogger
         )
 
         // 9. Contract registry + orchestrator

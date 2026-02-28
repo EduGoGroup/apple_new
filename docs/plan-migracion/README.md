@@ -1,49 +1,24 @@
 # Plan de Migración: KMP → apple_new
 
+> **ESTADO: COMPLETADA** — Ver [COMPLETADO.md](COMPLETADO.md) para el resumen final.
+
 ## Objetivo
 
 Portar todas las funcionalidades del proyecto KMP (`kmp_new`) al proyecto Swift nativo (`apple_new`), utilizando exclusivamente tecnología Apple de última generación (Swift 6.2, iOS 26, macOS 26, Liquid Glass, SwiftData). Sin código deprecado, sin retrocompatibilidad.
 
-## Estado Actual
-
-### Lo que YA existe en apple_new (95% estructura base)
-- 6 paquetes SPM con jerarquía estricta (617 archivos Swift)
-- NetworkClient con interceptors, CircuitBreaker, RateLimiter
-- CQRS completo (Commands, Queries, Events, Mediator)
-- DynamicUI base (ScreenLoader + DataLoader + Resolvers, 12 patterns, 31 control types)
-- Presentation con 119 archivos (Liquid Glass, 42 archivos de accesibilidad, ViewModels, coordinadores)
-- SwiftData persistence con 6 entidades
-- Auth flow básico (login/logout, JWT, interceptor)
-- DemoApp funcional con splash/login/main/dynamic-screen
-
-### Lo que FALTA migrar desde KMP
-- Sync Bundle completo (full sync + delta sync)
-- Menu dinámico con RBAC y adaptación por breakpoints
-- Offline-first completo (MutationQueue, SyncEngine, ConflictResolver)
-- NetworkObserver nativo (NWPathMonitor)
-- 30+ ScreenContracts con EventOrchestrator
-- Dashboards dinámicos por rol
-- Token refresh real con rotación JWT
-- Cambio de contexto escuela (multi-escuela)
-- i18n de 2 capas (local + server-driven)
-- Glosario dinámico por institución
-- Formularios CRUD completos con validación
-- Paginación, búsqueda, filtros
-- Indicadores de stale data y connectivity banner
-
 ## Fases
 
-| Fase | Nombre | Archivos Estimados | Dependencias |
-|------|--------|-------------------|--------------|
-| 0 | [Cimientos: Auth completo + Sync Bundle](fase-00-auth-sync.md) | ~25 | Ninguna |
-| 1 | [Menu Dinámico + Navegación Adaptativa](fase-01-menu-navegacion.md) | ~20 | Fase 0 |
-| 2 | [Offline-First: NetworkObserver + MutationQueue + SyncEngine](fase-02-offline-first.md) | ~25 | Fase 0 |
-| 3 | [ScreenContracts + EventOrchestrator](fase-03-contracts-orchestrator.md) | ~35 | Fase 1 |
-| 4 | [Renderers SDUI + Formularios CRUD](fase-04-renderers-crud.md) | ~30 | Fase 3 |
-| 5 | [Dashboards Dinámicos por Rol](fase-05-dashboards.md) | ~15 | Fase 3, 4 |
-| 6 | [i18n + Glosario Dinámico](fase-06-i18n-glosario.md) | ~12 | Fase 0 |
-| 7 | [UX Avanzado: Stale Data, Skeleton, Toolbar Dinámico](fase-07-ux-avanzado.md) | ~15 | Fase 2, 4 |
-| 8 | [Integración Final + Tests E2E](fase-08-integracion-tests.md) | ~20 | Todas |
+| Fase | Nombre | PR | Estado |
+|------|--------|----|--------|
+| 0 | [Auth completo + Sync Bundle](fase-00-auth-sync.md) | #1 | ✅ Completada |
+| 1 | [Menu Dinámico + Navegación Adaptativa](fase-01-menu-navegacion.md) | #2 | ✅ Completada |
+| 2 | [Offline-First: NetworkObserver + MutationQueue + SyncEngine](fase-02-offline-first.md) | #2 | ✅ Completada |
+| 3 | [ScreenContracts + EventOrchestrator](fase-03-contracts-orchestrator.md) | #4 | ✅ Completada |
+| 4 | [Renderers SDUI + Formularios CRUD](fase-04-renderers-crud.md) | #4 | ✅ Completada |
+| 5 | [Dashboards Dinámicos por Rol](fase-05-dashboards.md) | #6 | ✅ Completada |
+| 6 | [i18n + Glosario Dinámico](fase-06-i18n-glosario.md) | #2 | ✅ Completada |
+| 7 | [UX Avanzado: Stale Data, Skeleton, Toolbar Dinámico](fase-07-ux-avanzado.md) | #4 | ✅ Completada |
+| 8 | [Integración Final + Tests E2E](fase-08-integracion-tests.md) | #6 | ✅ Completada |
 
 ## Diagrama de Dependencias
 

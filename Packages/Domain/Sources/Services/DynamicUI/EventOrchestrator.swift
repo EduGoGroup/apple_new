@@ -187,11 +187,22 @@ public actor EventOrchestrator {
             return .error(message: "No endpoint for event: \(event.rawValue)")
         }
 
+        // For delete events, return pendingDelete so the ViewModel can show
+        // an undo toast and delay the actual HTTP DELETE by 5 seconds.
+        if event == .delete {
+            let itemId = context.selectedItem?["id"]?.stringValue ?? ""
+            return .pendingDelete(
+                screenKey: context.screenKey,
+                itemId: itemId,
+                endpoint: endpoint,
+                method: "DELETE"
+            )
+        }
+
         let method: String
         switch event {
         case .saveNew: method = "POST"
         case .saveExisting: method = "PUT"
-        case .delete: method = "DELETE"
         default: method = "POST"
         }
 
@@ -206,8 +217,6 @@ public actor EventOrchestrator {
         do {
             let request: HTTPRequest
             switch event {
-            case .delete:
-                request = HTTPRequest.delete(endpoint)
             case .saveExisting:
                 let bodyData = try JSONEncoder().encode(body)
                 request = HTTPRequest.put(endpoint).jsonBody(bodyData)
@@ -221,7 +230,6 @@ public actor EventOrchestrator {
             switch event {
             case .saveNew: message = "Created successfully"
             case .saveExisting: message = "Updated successfully"
-            case .delete: message = "Deleted successfully"
             default: message = "Operation completed"
             }
             return .success(message: message)

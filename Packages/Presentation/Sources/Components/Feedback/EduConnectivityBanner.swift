@@ -35,7 +35,7 @@ public struct EduConnectivityBanner: View {
             if !isOnline {
                 bannerContent(
                     icon: "wifi.slash",
-                    text: "Sin conexión",
+                    text: EduStrings.offline,
                     tint: .red
                 )
             } else if isSyncing {
@@ -43,7 +43,7 @@ public struct EduConnectivityBanner: View {
             } else if showSynced {
                 bannerContent(
                     icon: "checkmark.circle.fill",
-                    text: "Sincronizado",
+                    text: EduStrings.synced,
                     tint: .green
                 )
             }
@@ -70,7 +70,7 @@ public struct EduConnectivityBanner: View {
             ProgressView()
                 .tint(.white)
 
-            Text("Sincronizando...")
+            Text(EduStrings.syncing)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.white)
 

@@ -193,6 +193,40 @@ public actor LocalSyncStore {
         try save(bundle: updatedBundle)
     }
 
+    /// Mergea un bundle parcial con el bundle local existente.
+    ///
+    /// Solo actualiza los buckets que fueron recibidos en la respuesta parcial.
+    /// Los buckets no incluidos en `receivedBuckets` se preservan del bundle local.
+    ///
+    /// - Parameters:
+    ///   - incoming: Bundle parcial recibido del backend.
+    ///   - receivedBuckets: Nombres de los buckets que se solicitaron.
+    /// - Returns: Bundle mergeado con datos parciales + datos locales preservados.
+    public func mergePartial(
+        incoming: UserDataBundle,
+        receivedBuckets: Set<String>
+    ) -> UserDataBundle {
+        guard let existing = cachedBundle else {
+            return incoming
+        }
+
+        var mergedHashes = existing.hashes
+        for (key, value) in incoming.hashes {
+            mergedHashes[key] = value
+        }
+
+        return UserDataBundle(
+            menu: receivedBuckets.contains("menu") ? incoming.menu : existing.menu,
+            permissions: receivedBuckets.contains("permissions") ? incoming.permissions : existing.permissions,
+            screens: receivedBuckets.contains("screens") ? incoming.screens : existing.screens,
+            availableContexts: receivedBuckets.contains("available_contexts") ? incoming.availableContexts : existing.availableContexts,
+            hashes: mergedHashes,
+            glossary: receivedBuckets.contains("glossary") ? incoming.glossary : existing.glossary,
+            strings: receivedBuckets.contains("strings") ? incoming.strings : existing.strings,
+            syncedAt: incoming.syncedAt
+        )
+    }
+
     /// Elimina el bundle persistido.
     public func clear() {
         UserDefaults.standard.removeObject(forKey: Self.storageKey)

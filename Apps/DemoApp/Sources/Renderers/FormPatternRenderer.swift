@@ -27,27 +27,38 @@ struct FormPatternRenderer: View {
     }
 
     var body: some View {
-        Form {
-            ForEach(screen.template.zones) { zone in
-                FormZoneSection(
-                    zone: zone,
-                    screen: screen,
-                    viewModel: viewModel
-                )
-            }
-        }
-        .formStyle(.grouped)
+        formContent
         .navigationTitle(title)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancelar") { dismiss() }
+                Button(EduStrings.cancel) { dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Guardar") { save() }
+                Button(EduStrings.save) { save() }
                     .fontWeight(.semibold)
             }
         }
         .onAppear { prepopulateFields() }
+    }
+
+    @ViewBuilder
+    private var formContent: some View {
+        switch viewModel.dataState {
+        case .loading:
+            EduFormSkeleton()
+                .padding()
+        default:
+            Form {
+                ForEach(screen.template.zones) { zone in
+                    FormZoneSection(
+                        zone: zone,
+                        screen: screen,
+                        viewModel: viewModel
+                    )
+                }
+            }
+            .formStyle(.grouped)
+        }
     }
 
     // MARK: - Validation
@@ -72,14 +83,14 @@ struct FormPatternRenderer: View {
                 let value = viewModel.fieldValues[key] ?? ""
 
                 if slot.required == true && value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    viewModel.fieldErrors[key] = "\(slot.label ?? "Campo") es requerido"
+                    viewModel.fieldErrors[key] = EduStrings.fieldRequired
                     hasErrors = true
                 }
 
                 if slot.controlType == .emailInput && !value.isEmpty {
                     let emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
                     if value.wholeMatch(of: emailRegex) == nil {
-                        viewModel.fieldErrors[key] = "Formato de email inválido"
+                        viewModel.fieldErrors[key] = EduStrings.invalidEmail
                         hasErrors = true
                     }
                 }
@@ -127,7 +138,7 @@ struct FormPatternRenderer: View {
     static func isInputControl(_ type: ControlType) -> Bool {
         switch type {
         case .textInput, .emailInput, .passwordInput, .numberInput, .searchBar,
-             .select, .checkbox, .switch, .radioGroup, .chip, .rating:
+             .select, .remoteSelect, .checkbox, .switch, .radioGroup, .chip, .rating:
             return true
         default:
             return false
@@ -215,6 +226,15 @@ private struct FormSlotRow: View {
                 onAction: { viewModel.executeAction($0) },
                 onEvent: { eventId in
                     Task { await viewModel.executeCustomEvent(eventId) }
+                },
+                selectOptions: viewModel.selectOptions,
+                onLoadSelectOptions: { fieldKey, endpoint, labelField, valueField in
+                    await viewModel.loadSelectOptions(
+                        fieldKey: fieldKey,
+                        endpoint: endpoint,
+                        labelField: labelField,
+                        valueField: valueField
+                    )
                 }
             )
             if let error = viewModel.fieldErrors[slot.field ?? slot.id] {

@@ -23,7 +23,8 @@ struct DynamicScreenView: View {
         let vm = DynamicScreenViewModel(
             screenLoader: screenLoader,
             dataLoader: dataLoader,
-            orchestrator: orchestrator
+            orchestrator: orchestrator,
+            networkClient: networkClient
         )
         vm.userContext = userContext
         self._viewModel = State(initialValue: vm)

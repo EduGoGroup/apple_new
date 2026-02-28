@@ -11,6 +11,8 @@ struct SlotRenderer: View {
     var fieldValues: Binding<[String: String]>?
     let onAction: (ActionDefinition) -> Void
     var onEvent: ((String) -> Void)? = nil
+    var selectOptions: [String: SelectOptionsState]? = nil
+    var onLoadSelectOptions: ((String, String, String, String) async -> Void)? = nil
 
     private let resolver = SlotBindingResolver()
 
@@ -134,7 +136,38 @@ struct SlotRenderer: View {
                     actions: actions,
                     onAction: { onAction($0) }
                 )
+
+            // MARK: - Remote Select
+            case .remoteSelect:
+                if let fieldValues {
+                    remoteSelectContent(fieldValues: fieldValues)
+                } else {
+                    Text(resolvedValue?.stringRepresentation ?? "")
+                }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func remoteSelectContent(fieldValues: Binding<[String: String]>) -> some View {
+        let fieldKey = slot.field ?? slot.id
+        let endpoint = slot.optionsEndpoint ?? ""
+        let labelField = slot.optionLabel ?? "name"
+        let valueField = slot.optionValue ?? "id"
+
+        if endpoint.isEmpty || onLoadSelectOptions == nil {
+            // Fallback to local select when no endpoint
+            SelectControl(slot: slot, fieldValues: fieldValues)
+        } else {
+            RemoteSelectField(
+                slot: slot,
+                state: selectOptions?[fieldKey],
+                selectedValue: fieldValues.wrappedValue[fieldKey],
+                onValueChanged: { fieldValues.wrappedValue[fieldKey] = $0 },
+                onLoadOptions: {
+                    await onLoadSelectOptions?(fieldKey, endpoint, labelField, valueField)
+                }
+            )
         }
     }
 

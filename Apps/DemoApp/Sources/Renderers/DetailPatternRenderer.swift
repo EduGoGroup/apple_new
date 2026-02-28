@@ -30,7 +30,8 @@ struct DetailPatternRenderer: View {
         Group {
             switch viewModel.dataState {
             case .idle, .loading:
-                EduLoadingStateView()
+                EduDetailSkeleton()
+                    .padding()
             case .error(let message):
                 EduErrorStateView(message: message) {
                     Task { await viewModel.refresh() }

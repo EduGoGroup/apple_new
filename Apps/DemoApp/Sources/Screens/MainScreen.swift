@@ -98,7 +98,7 @@ struct MainScreen: View {
                 )
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cerrar") { deepLinkScreen = nil }
+                        Button(EduStrings.close) { deepLinkScreen = nil }
                     }
                 }
             }
@@ -221,17 +221,30 @@ struct MainScreen: View {
     private func switchContext(_ context: UserContextDTO) async {
         do {
             try await container.authService.switchContext(context)
-            let bundle = try await container.syncService.fullSync()
-            let permissions = context.permissions
-            await container.menuService.updateMenu(from: bundle, permissions: permissions)
+            await container.screenLoader.clearCache()
+            await container.dataLoader.clearCache()
 
-            // Actualizar UI
+            // Fase 1: Carga rapida de metadata (menu, permissions, contexts)
+            let metadataBundle = try await container.syncService.syncBuckets([
+                .menu, .permissions, .availableContexts
+            ])
+            let permissions = context.permissions
+            await container.menuService.updateMenu(from: metadataBundle, permissions: permissions)
+
+            // Actualizar UI inmediatamente con metadata
             roleName = context.roleName
             schoolName = context.schoolName
             currentSchoolId = context.schoolId
-            availableContexts = bundle.availableContexts
+            availableContexts = metadataBundle.availableContexts
             activeUserContext = ScreenUserContext(dto: context)
             selectedItemKey = nil
+
+            // Fase 2: Cargar screens en background y poblar cache
+            Task {
+                if let bundle = try? await container.syncService.syncBuckets([.screens]) {
+                    await container.screenLoader.seedFromBundle(screens: bundle.screens)
+                }
+            }
         } catch {
             // Error silencioso — el usuario permanece en el contexto actual
         }

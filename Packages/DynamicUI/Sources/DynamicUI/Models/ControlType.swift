@@ -28,4 +28,6 @@ public enum ControlType: String, Codable, Sendable {
     case listItem = "list-item"
     case listItemNavigation = "list-item-navigation"
     case metricCard = "metric-card"
+    // Remote
+    case remoteSelect = "remote_select"
 }
