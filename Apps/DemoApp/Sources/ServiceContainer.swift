@@ -45,6 +45,14 @@ final class ServiceContainer {
     let contractRegistry: ContractRegistry
     let eventOrchestrator: EventOrchestrator
 
+    // MARK: - Optimistic UI
+
+    let optimisticUpdateManager: OptimisticUpdateManager
+
+    // MARK: - Navigation
+
+    let breadcrumbTracker: BreadcrumbTracker
+
     // MARK: - i18n
 
     let serverStringResolver: ServerStringResolver
@@ -116,14 +124,17 @@ final class ServiceContainer {
             logger: cacheLogger
         )
 
-        // 9. Contract registry + orchestrator
+        // 9. Contract registry + optimistic manager + orchestrator
         let registry = ContractRegistry()
         registry.registerDefaults()
         self.contractRegistry = registry
+        let optimisticManager = OptimisticUpdateManager()
+        self.optimisticUpdateManager = optimisticManager
         self.eventOrchestrator = EventOrchestrator(
             registry: registry,
             networkClient: authenticatedClient,
-            dataLoader: self.dataLoader
+            dataLoader: self.dataLoader,
+            optimisticManager: optimisticManager
         )
 
         // 10. Offline: mutation queue → sync engine → connectivity manager
@@ -142,12 +153,15 @@ final class ServiceContainer {
             syncService: syncService
         )
 
-        // 11. i18n services
+        // 11. Navigation
+        self.breadcrumbTracker = BreadcrumbTracker()
+
+        // 12. i18n services
         self.serverStringResolver = ServerStringResolver()
         self.glossaryProvider = GlossaryProvider()
         self.localeService = LocaleService()
 
-        // 12. Feedback
+        // 13. Feedback
         self.toastManager = ToastManager.shared
     }
 }

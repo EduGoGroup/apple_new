@@ -16,6 +16,26 @@ public struct DataLoadResult: Sendable {
     }
 }
 
+/// Result of a paginated load with server metadata.
+public struct PaginatedResult: Sendable {
+    public let items: [[String: EduModels.JSONValue]]
+    public let totalCount: Int?
+    public let hasNextPage: Bool
+    public let currentOffset: Int
+
+    public init(
+        items: [[String: EduModels.JSONValue]],
+        totalCount: Int?,
+        hasNextPage: Bool,
+        currentOffset: Int
+    ) {
+        self.items = items
+        self.totalCount = totalCount
+        self.hasNextPage = hasNextPage
+        self.currentOffset = currentOffset
+    }
+}
+
 /// Actor responsable de cargar datos dinamicos con soporte dual-API y cache offline.
 public actor DataLoader {
     private let networkClient: NetworkClientProtocol
@@ -133,6 +153,65 @@ public actor DataLoader {
     ) async throws -> [String: EduModels.JSONValue] {
         let request = buildRequest(endpoint: endpoint, config: config, offset: currentOffset)
         return try await fetchAndNormalize(request)
+    }
+
+    /// Loads next page with server pagination metadata extraction.
+    public func loadNextPageWithMetadata(
+        endpoint: String,
+        config: DataConfig?,
+        currentOffset: Int
+    ) async throws -> PaginatedResult {
+        let raw = try await loadNextPage(endpoint: endpoint, config: config, currentOffset: currentOffset)
+        let items = extractItemsFromResponse(from: raw)
+        let pageSize = config?.pagination?.pageSize ?? 20
+
+        let totalCount = Self.extractTotalCount(from: raw)
+        let serverHasMore = Self.extractHasMore(from: raw)
+        let hasNextPage = serverHasMore ?? (items.count >= pageSize)
+
+        return PaginatedResult(
+            items: items,
+            totalCount: totalCount,
+            hasNextPage: hasNextPage,
+            currentOffset: currentOffset
+        )
+    }
+
+    /// Extract items array from API response dict.
+    private func extractItemsFromResponse(from raw: [String: EduModels.JSONValue]) -> [[String: EduModels.JSONValue]] {
+        for key in ["items", "data", "results"] {
+            if case .array(let array) = raw[key] {
+                return array.compactMap { element in
+                    if case .object(let dict) = element { return dict }
+                    return nil
+                }
+            }
+        }
+        return [raw]
+    }
+
+    /// Extract totalCount from response metadata.
+    static func extractTotalCount(from raw: [String: EduModels.JSONValue]) -> Int? {
+        for key in ["total", "totalCount", "total_count", "count"] {
+            if case .integer(let count) = raw[key] { return count }
+        }
+        if case .object(let meta) = raw["meta"],
+           case .integer(let total) = meta["total"] {
+            return total
+        }
+        return nil
+    }
+
+    /// Extract hasMore/hasNextPage from response metadata.
+    static func extractHasMore(from raw: [String: EduModels.JSONValue]) -> Bool? {
+        for key in ["hasMore", "has_more", "hasNextPage", "has_next_page"] {
+            if case .bool(let value) = raw[key] { return value }
+        }
+        if case .object(let meta) = raw["meta"],
+           case .bool(let hasMore) = meta["has_more"] {
+            return hasMore
+        }
+        return nil
     }
 
     // MARK: - Offline Mutations

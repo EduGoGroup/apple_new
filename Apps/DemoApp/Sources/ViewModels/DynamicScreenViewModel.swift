@@ -29,6 +29,16 @@ final class DynamicScreenViewModel {
     var onNavigate: ((String, [String: String]) -> Void)?
     var onSubmit: ((String, String, [String: JSONValue]) async -> Void)?
     private var currentOffset: Int = 0
+    private var prefetchCoordinator: PrefetchCoordinator?
+
+    // MARK: - Optimistic UI
+
+    var optimisticManager: OptimisticUpdateManager?
+    /// Tracks item IDs (not update IDs) that have pending optimistic updates.
+    private(set) var pendingOptimisticItemIds: Set<String> = []
+    /// Maps updateId -> itemId for reverse lookup on confirm/rollback.
+    private var optimisticUpdateToItemId: [String: String] = [:]
+    private var optimisticObserverTask: Task<Void, Never>?
 
     // MARK: - Form State
 
@@ -76,6 +86,7 @@ final class DynamicScreenViewModel {
         do {
             let screen = try await screenLoader.loadScreen(key: key)
             screenState = .ready(screen)
+            self.prefetchCoordinator = PrefetchCoordinator()
             if screen.dataEndpoint != nil {
                 await loadData(screen: screen)
             } else if orchestrator != nil {
@@ -119,20 +130,62 @@ final class DynamicScreenViewModel {
         currentOffset += pageSize
 
         do {
-            let raw = try await dataLoader.loadNextPage(
+            // Try to consume prefetched data first
+            if let prefetched = await prefetchCoordinator?.consumePrefetchedData() {
+                let newHasMore = prefetched.count >= pageSize
+                dataState = .success(items: items + prefetched, hasMore: newHasMore, loadingMore: false)
+                return
+            }
+
+            // No prefetch available — load normally with metadata
+            let result = try await dataLoader.loadNextPageWithMetadata(
                 endpoint: endpoint,
                 config: screen.dataConfig,
                 currentOffset: currentOffset
             )
-            let newItems = extractItems(from: raw)
             dataState = .success(
-                items: items + newItems,
-                hasMore: newItems.count >= pageSize,
+                items: items + result.items,
+                hasMore: result.hasNextPage,
                 loadingMore: false
             )
         } catch {
             dataState = .success(items: items, hasMore: false, loadingMore: false)
         }
+    }
+
+    // MARK: - Prefetch
+
+    func evaluatePrefetch(visibleIndex: Int, totalItems: Int) {
+        guard case .success(_, let hasMore, let loadingMore) = dataState,
+              hasMore, !loadingMore else { return }
+
+        Task {
+            await prefetchCoordinator?.evaluatePrefetch(
+                visibleIndex: visibleIndex,
+                totalItems: totalItems,
+                hasMore: hasMore,
+                loadAction: { [weak self] in
+                    guard let self else { return [] }
+                    return try await self.performPrefetch()
+                }
+            )
+        }
+    }
+
+    @MainActor
+    private func performPrefetch() async throws -> [[String: EduModels.JSONValue]] {
+        guard case .ready(let screen) = screenState,
+              let endpoint = screen.dataEndpoint else { return [] }
+
+        let pageSize = screen.dataConfig?.pagination?.pageSize ?? 20
+        let nextOffset = currentOffset + pageSize
+
+        let result = try await dataLoader.loadNextPageWithMetadata(
+            endpoint: endpoint,
+            config: screen.dataConfig,
+            currentOffset: nextOffset
+        )
+        return result.items
     }
 
     // MARK: - Event Execution
@@ -326,6 +379,69 @@ final class DynamicScreenViewModel {
         }
     }
 
+    // MARK: - Optimistic Queries
+
+    /// Returns true if the given item ID has a pending optimistic update.
+    func isPendingOptimistic(itemId: String) -> Bool {
+        pendingOptimisticItemIds.contains(itemId)
+    }
+
+    /// Starts observing the optimistic manager status stream for resolved updates.
+    func startOptimisticObserver() {
+        guard let manager = optimisticManager else { return }
+        optimisticObserverTask?.cancel()
+        optimisticObserverTask = Task { [weak self] in
+            for await event in await manager.statusStream {
+                guard let self, !Task.isCancelled else { break }
+                self.handleOptimisticEvent(event)
+            }
+        }
+    }
+
+    /// Stops observing the optimistic manager status stream.
+    func stopOptimisticObserver() {
+        optimisticObserverTask?.cancel()
+        optimisticObserverTask = nil
+    }
+
+    private func handleOptimisticEvent(_ event: OptimisticStatusEvent) {
+        // Only handle events for updates owned by this ViewModel
+        guard let itemId = optimisticUpdateToItemId[event.updateId] else { return }
+
+        switch event.status {
+        case .confirmed:
+            pendingOptimisticItemIds.remove(itemId)
+            optimisticUpdateToItemId.removeValue(forKey: event.updateId)
+
+        case .rolledBack:
+            pendingOptimisticItemIds.remove(itemId)
+            optimisticUpdateToItemId.removeValue(forKey: event.updateId)
+            // Restore previous items, preserving existing hasMore
+            if let previousItems = event.previousItems {
+                let existingHasMore: Bool
+                if case .success(_, let hasMore, _) = dataState {
+                    existingHasMore = hasMore
+                } else {
+                    existingHasMore = false
+                }
+                dataState = .success(
+                    items: previousItems,
+                    hasMore: existingHasMore,
+                    loadingMore: false
+                )
+            }
+            ToastManager.shared.showError("Save failed. Changes reverted.")
+
+        case .timedOut:
+            pendingOptimisticItemIds.remove(itemId)
+            optimisticUpdateToItemId.removeValue(forKey: event.updateId)
+            ToastManager.shared.showWarning("Save is taking longer than expected.")
+
+        case .pending:
+            break
+        }
+    }
+
     // MARK: - Private
 
     private func handleResult(_ result: EventResult) {
@@ -368,6 +484,72 @@ final class DynamicScreenViewModel {
                 endpoint: endpoint,
                 method: method
             ))
+        case .optimisticSuccess(let updateId, let message, let optimisticData):
+            if !message.isEmpty {
+                ToastManager.shared.showSuccess(message)
+            }
+
+            // Snapshot current items for rollback
+            var currentItems: [[String: JSONValue]] = []
+            var existingHasMore = false
+            if case .success(let items, let hasMore, _) = dataState {
+                currentItems = items
+                existingHasMore = hasMore
+            }
+
+            // Determine the item ID for tracking pending state
+            var trackedItemId = updateId  // Fallback to updateId for new items
+
+            // Apply optimistic change to dataState
+            if case .object(let bodyDict) = optimisticData {
+                let existingId = bodyDict["id"]?.stringValue
+                if let existingId, currentItems.contains(where: { $0["id"]?.stringValue == existingId }) {
+                    // Update existing item — merge fields
+                    trackedItemId = existingId
+                    let updatedItems = currentItems.map { item -> [String: JSONValue] in
+                        if item["id"]?.stringValue == existingId {
+                            var merged = item
+                            for (key, value) in bodyDict {
+                                merged[key] = value
+                            }
+                            return merged
+                        }
+                        return item
+                    }
+                    dataState = .success(items: updatedItems, hasMore: existingHasMore, loadingMore: false)
+                } else {
+                    // Prepend new item
+                    var newItem = bodyDict
+                    if newItem["id"] == nil {
+                        newItem["id"] = .string(updateId)
+                    }
+                    trackedItemId = newItem["id"]?.stringValue ?? updateId
+                    let updatedItems = [newItem] + currentItems
+                    dataState = .success(items: updatedItems, hasMore: existingHasMore, loadingMore: false)
+                }
+            }
+
+            // Track pending state by item ID and register snapshot with manager
+            pendingOptimisticItemIds.insert(trackedItemId)
+            optimisticUpdateToItemId[updateId] = trackedItemId
+
+            if let manager = optimisticManager {
+                guard case .ready(let screen) = screenState else { break }
+                Task {
+                    await manager.registerOptimisticUpdate(
+                        id: updateId,
+                        screenKey: screen.screenKey,
+                        event: isEditing ? .saveExisting : .saveNew,
+                        previousItems: currentItems,
+                        optimisticItems: [],
+                        fieldValues: fieldValues
+                    )
+                }
+            }
+
+            // Start observing if not already
+            startOptimisticObserver()
+
         case .cancelled, .noOp:
             break
         }

@@ -368,4 +368,119 @@ struct DataLoaderTests {
         let cleared = await loader.cacheCount
         #expect(cleared == 0)
     }
+
+    // MARK: - Metadata Extraction Tests
+
+    @Test("extractTotalCount from response top-level keys")
+    func extractTotalCount() {
+        let raw: [String: JSONValue] = ["total": .integer(100), "items": .array([])]
+        let count = DataLoader.extractTotalCount(from: raw)
+        #expect(count == 100)
+    }
+
+    @Test("extractTotalCount from response meta object")
+    func extractTotalCountFromMeta() {
+        let raw: [String: JSONValue] = [
+            "meta": .object(["total": .integer(50)]),
+            "items": .array([])
+        ]
+        let count = DataLoader.extractTotalCount(from: raw)
+        #expect(count == 50)
+    }
+
+    @Test("extractTotalCount returns nil when not present")
+    func extractTotalCountReturnsNil() {
+        let raw: [String: JSONValue] = ["items": .array([])]
+        let count = DataLoader.extractTotalCount(from: raw)
+        #expect(count == nil)
+    }
+
+    @Test("extractHasMore from response top-level keys")
+    func extractHasMore() {
+        let raw: [String: JSONValue] = ["has_more": .bool(true), "items": .array([])]
+        let hasMore = DataLoader.extractHasMore(from: raw)
+        #expect(hasMore == true)
+    }
+
+    @Test("extractHasMore from meta object")
+    func extractHasMoreFromMeta() {
+        let raw: [String: JSONValue] = [
+            "meta": .object(["has_more": .bool(false)]),
+            "items": .array([])
+        ]
+        let hasMore = DataLoader.extractHasMore(from: raw)
+        #expect(hasMore == false)
+    }
+
+    @Test("extractHasMore returns nil when not present")
+    func extractHasMoreReturnsNil() {
+        let raw: [String: JSONValue] = ["items": .array([])]
+        let hasMore = DataLoader.extractHasMore(from: raw)
+        #expect(hasMore == nil)
+    }
+
+    @Test("loadNextPageWithMetadata returns correct paginated result")
+    func loadNextPageWithMetadata() async throws {
+        let mock = MockNetworkClient()
+        let json = """
+        {"items": [{"id": "1"}, {"id": "2"}], "total": 50, "has_more": true}
+        """.data(using: .utf8)!
+        await mock.setDataResponse(data: json)
+
+        let loader = makeLoader(mock: mock)
+
+        let config = try JSONDecoder().decode(DataConfig.self, from: """
+        {
+            "pagination": {
+                "pageSize": 10,
+                "limitParam": "limit",
+                "offsetParam": "offset"
+            }
+        }
+        """.data(using: .utf8)!)
+
+        let result = try await loader.loadNextPageWithMetadata(
+            endpoint: "/api/v1/items",
+            config: config,
+            currentOffset: 20
+        )
+
+        #expect(result.items.count == 2)
+        #expect(result.totalCount == 50)
+        #expect(result.hasNextPage == true)
+        #expect(result.currentOffset == 20)
+    }
+
+    @Test("loadNextPageWithMetadata infers hasNextPage from item count when server does not provide it")
+    func loadNextPageWithMetadataInfersHasMore() async throws {
+        let mock = MockNetworkClient()
+        // 10 items with pageSize=10 → hasNextPage should be true (inferred)
+        let itemsJson = (0..<10).map { "{\"id\": \"\($0)\"}" }.joined(separator: ",")
+        let json = """
+        {"items": [\(itemsJson)]}
+        """.data(using: .utf8)!
+        await mock.setDataResponse(data: json)
+
+        let loader = makeLoader(mock: mock)
+
+        let config = try JSONDecoder().decode(DataConfig.self, from: """
+        {
+            "pagination": {
+                "pageSize": 10,
+                "limitParam": "limit",
+                "offsetParam": "offset"
+            }
+        }
+        """.data(using: .utf8)!)
+
+        let result = try await loader.loadNextPageWithMetadata(
+            endpoint: "/api/v1/items",
+            config: config,
+            currentOffset: 0
+        )
+
+        #expect(result.items.count == 10)
+        #expect(result.totalCount == nil)
+        #expect(result.hasNextPage == true) // inferred: items.count >= pageSize
+    }
 }
