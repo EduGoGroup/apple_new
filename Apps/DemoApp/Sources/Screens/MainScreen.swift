@@ -29,6 +29,11 @@ struct MainScreen: View {
     @State private var allSchools: [[String: JSONValue]] = []
     @State private var deepLinkScreen: DeepLink?
 
+    // MARK: - Breadcrumb State
+
+    @State private var breadcrumbTracker = BreadcrumbTracker()
+    @State private var breadcrumbEntries: [BreadcrumbBarEntry] = []
+
     var body: some View {
         AdaptiveNavigationContainer(
             menuItems: menuItems,
@@ -65,11 +70,30 @@ struct MainScreen: View {
                 dataLoader: container.dataLoader,
                 networkClient: container.authenticatedNetworkClient,
                 orchestrator: container.eventOrchestrator,
-                userContext: activeUserContext
+                userContext: activeUserContext,
+                breadcrumbTracker: breadcrumbTracker
             )
+        }
+        .safeAreaInset(edge: .top) {
+            if breadcrumbEntries.count > 1 {
+                BreadcrumbBar(entries: breadcrumbEntries) { entryId in
+                    Task {
+                        if let entry = await breadcrumbTracker.navigateTo(entryId: entryId) {
+                            // Navigate to the breadcrumb's screen by finding its menu item
+                            if let itemKey = findMenuItemKey(for: entry.screenKey) {
+                                selectedItemKey = itemKey
+                            }
+                        }
+                    }
+                }
+            }
         }
         .task { await loadInitialData() }
         .task { await observeMenuChanges() }
+        .task { await observeBreadcrumbChanges() }
+        .onChange(of: selectedItemKey) { _, _ in
+            Task { await breadcrumbTracker.clear() }
+        }
         .onChange(of: deepLinkHandler?.pendingDeepLink) { _, newLink in
             if let link = newLink {
                 navigateToDeepLink(link)
@@ -185,6 +209,18 @@ struct MainScreen: View {
             menuItems = menu
             if selectedItemKey == nil, let first = menu.first {
                 selectedItemKey = first.key
+            }
+        }
+    }
+
+    private func observeBreadcrumbChanges() async {
+        for await trail in breadcrumbTracker.trailStream {
+            breadcrumbEntries = trail.map { entry in
+                BreadcrumbBarEntry(
+                    id: entry.id,
+                    title: entry.title,
+                    icon: entry.icon
+                )
             }
         }
     }

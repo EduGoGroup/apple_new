@@ -9,6 +9,7 @@ struct DynamicScreenView: View {
     let screenKey: String
     @State private var viewModel: DynamicScreenViewModel
     let onLogout: (() -> Void)?
+    let breadcrumbTracker: BreadcrumbTracker?
 
     init(
         screenKey: String,
@@ -17,9 +18,11 @@ struct DynamicScreenView: View {
         networkClient: NetworkClient,
         orchestrator: EventOrchestrator? = nil,
         userContext: ScreenUserContext = .anonymous,
-        onLogout: (() -> Void)? = nil
+        onLogout: (() -> Void)? = nil,
+        breadcrumbTracker: BreadcrumbTracker? = nil
     ) {
         self.screenKey = screenKey
+        self.breadcrumbTracker = breadcrumbTracker
         let vm = DynamicScreenViewModel(
             screenLoader: screenLoader,
             dataLoader: dataLoader,
@@ -57,11 +60,41 @@ struct DynamicScreenView: View {
             }
         }
         .onAppear { viewModel.onLogout = onLogout }
-        .task(id: screenKey) { await viewModel.loadScreen(key: screenKey) }
+        .task(id: screenKey) {
+            await viewModel.loadScreen(key: screenKey)
+            if case .ready(let screen) = viewModel.screenState {
+                await breadcrumbTracker?.push(
+                    screenKey: screenKey,
+                    title: screen.screenName,
+                    icon: Self.iconForPattern(screen.pattern),
+                    pattern: screen.pattern.rawValue
+                )
+            }
+        }
         .alert("Acción", isPresented: showAlert) {
             Button("OK") {}
         } message: {
             Text(viewModel.alertMessage ?? "")
+        }
+    }
+
+    // MARK: - Breadcrumb Helpers
+
+    static func iconForPattern(_ pattern: ScreenPattern) -> String {
+        switch pattern {
+        case .dashboard: "square.grid.2x2"
+        case .list: "list.bullet"
+        case .detail: "doc.text"
+        case .form: "square.and.pencil"
+        case .settings: "gearshape"
+        case .search: "magnifyingglass"
+        case .profile: "person"
+        case .modal: "rectangle.portrait"
+        case .notification: "bell"
+        case .onboarding: "hand.wave"
+        case .emptyState: "tray"
+        case .login: "person.badge.key"
+        case .unknown: "questionmark.square"
         }
     }
 }

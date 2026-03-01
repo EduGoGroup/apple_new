@@ -18,17 +18,20 @@ public actor EventOrchestrator {
     private let networkClient: any NetworkClientProtocol
     private let dataLoader: DataLoader
     private let mutationQueue: MutationQueue?
+    private let optimisticManager: OptimisticUpdateManager?
 
     public init(
         registry: ContractRegistry,
         networkClient: any NetworkClientProtocol,
         dataLoader: DataLoader,
-        mutationQueue: MutationQueue? = nil
+        mutationQueue: MutationQueue? = nil,
+        optimisticManager: OptimisticUpdateManager? = nil
     ) {
         self.registry = registry
         self.networkClient = networkClient
         self.dataLoader = dataLoader
         self.mutationQueue = mutationQueue
+        self.optimisticManager = optimisticManager
     }
 
     /// Ejecuta un evento de pantalla.
@@ -213,7 +216,67 @@ public actor EventOrchestrator {
         }
         let body = JSONValue.object(bodyDict)
 
-        // Intentar enviar directamente al API
+        // Optimistic path: for saveNew/saveExisting, return immediately and confirm in background.
+        if let optimisticManager, (event == .saveNew || event == .saveExisting) {
+            let updateId = UUID().uuidString
+            let message: String
+            switch event {
+            case .saveNew: message = "Created successfully"
+            case .saveExisting: message = "Updated successfully"
+            default: message = "Operation completed"
+            }
+
+            // Register the optimistic update (previous/optimistic items are set by the ViewModel).
+            await optimisticManager.registerOptimisticUpdate(
+                id: updateId,
+                screenKey: context.screenKey,
+                event: event,
+                previousItems: [],
+                optimisticItems: [],
+                fieldValues: context.fieldValues
+            )
+
+            // Launch background task to send to server
+            let networkClient = self.networkClient
+            let queue = self.mutationQueue
+            Task.detached { [networkClient, queue] in
+                do {
+                    let request: HTTPRequest
+                    switch event {
+                    case .saveExisting:
+                        let bodyData = try JSONEncoder().encode(body)
+                        request = HTTPRequest.put(endpoint).jsonBody(bodyData)
+                    default:
+                        let bodyData = try JSONEncoder().encode(body)
+                        request = HTTPRequest.post(endpoint).jsonBody(bodyData)
+                    }
+                    let _: EmptyResponse = try await networkClient.request(request)
+                    await optimisticManager.confirmUpdate(id: updateId)
+                } catch {
+                    // Try offline queue before rolling back
+                    if let queue {
+                        let mutation = PendingMutation(
+                            endpoint: endpoint,
+                            method: method,
+                            body: body
+                        )
+                        if (try? await queue.enqueue(mutation)) != nil {
+                            await optimisticManager.confirmUpdate(id: updateId)
+                            return
+                        }
+                    }
+                    await optimisticManager.rollbackUpdate(id: updateId)
+                }
+            }
+
+            return .optimisticSuccess(
+                updateId: updateId,
+                message: message,
+                optimisticData: body
+            )
+        }
+
+        // Non-optimistic path: send directly to API and wait for response.
         do {
             let request: HTTPRequest
             switch event {
