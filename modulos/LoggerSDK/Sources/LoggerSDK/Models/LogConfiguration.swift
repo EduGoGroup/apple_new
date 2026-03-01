@@ -18,6 +18,10 @@ public struct LogConfiguration: Sendable {
     // MARK: - Environment
 
     /// Entorno de ejecución de la aplicación.
+    ///
+    /// Mirrors `AppEnvironment` from EduFoundation. LoggerSDK is a standalone package
+    /// and cannot import EduFoundation, so this enum is kept in sync manually.
+    /// Uses `EDUGO_ENVIRONMENT` env var — consistent with AppEnvironment.
     public enum Environment: String, Sendable {
         case development
         case staging
@@ -103,7 +107,7 @@ public struct LogConfiguration: Sendable {
         #if DEBUG
         return .development
         #else
-        if let envString = ProcessInfo.processInfo.environment["APP_ENVIRONMENT"],
+        if let envString = ProcessInfo.processInfo.environment["EDUGO_ENVIRONMENT"],
            let env = Environment(rawValue: envString.lowercased()) {
             return env
         }

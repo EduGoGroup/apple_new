@@ -21,6 +21,7 @@ let package = Package(
         .target(
             name: "EduCore",
             dependencies: [
+                .product(name: "EduFoundation", package: "Foundation"),
                 "EduModels",
                 "EduLogger",
                 "EduUtilities"

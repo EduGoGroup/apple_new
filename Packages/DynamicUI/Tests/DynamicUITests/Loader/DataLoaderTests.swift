@@ -271,4 +271,101 @@ struct DataLoaderTests {
         let online = await loader.isOnline
         #expect(online == true)
     }
+
+    // MARK: - Cache Max Size Tests
+
+    @Test("Cache respects max size and evicts oldest entry")
+    func cacheRespectsMaxSize() async throws {
+        let mock = MockNetworkClient()
+        let json = """
+        {"value": 1}
+        """.data(using: .utf8)!
+        await mock.setDataResponse(data: json)
+
+        let loader = DataLoader(
+            networkClient: mock,
+            adminBaseURL: "https://admin.api.test",
+            mobileBaseURL: "https://mobile.api.test",
+            maxCacheSize: 3
+        )
+
+        // Fill cache to capacity
+        _ = try await loader.loadData(endpoint: "/api/v1/a", config: nil)
+        _ = try await loader.loadData(endpoint: "/api/v1/b", config: nil)
+        _ = try await loader.loadData(endpoint: "/api/v1/c", config: nil)
+
+        let countAtCapacity = await loader.cacheCount
+        #expect(countAtCapacity == 3)
+
+        // Insert one more — oldest (/a) should be evicted
+        _ = try await loader.loadData(endpoint: "/api/v1/d", config: nil)
+
+        let countAfter = await loader.cacheCount
+        #expect(countAfter == 3)
+
+        // /a should be gone from cache
+        await loader.setOnline(false)
+        await #expect(throws: Error.self) {
+            _ = try await loader.loadDataWithResult(endpoint: "/api/v1/a", config: nil, params: nil)
+        }
+    }
+
+    @Test("Accessing cached entry updates recency preventing eviction")
+    func cacheAccessUpdatesRecency() async throws {
+        let mock = MockNetworkClient()
+        let json = """
+        {"value": 1}
+        """.data(using: .utf8)!
+        await mock.setDataResponse(data: json)
+
+        let loader = DataLoader(
+            networkClient: mock,
+            adminBaseURL: "https://admin.api.test",
+            mobileBaseURL: "https://mobile.api.test",
+            maxCacheSize: 3
+        )
+
+        // Fill cache: a, b, c (a is oldest)
+        _ = try await loader.loadData(endpoint: "/api/v1/a", config: nil)
+        _ = try await loader.loadData(endpoint: "/api/v1/b", config: nil)
+        _ = try await loader.loadData(endpoint: "/api/v1/c", config: nil)
+
+        // Access /a again — updates its timestamp, making /b the oldest
+        _ = try await loader.loadData(endpoint: "/api/v1/a", config: nil)
+
+        // Insert /d — should evict /b (now oldest), not /a
+        _ = try await loader.loadData(endpoint: "/api/v1/d", config: nil)
+
+        // /a should still be in cache, /b should be gone
+        await loader.setOnline(false)
+
+        let resultA = try await loader.loadDataWithResult(endpoint: "/api/v1/a", config: nil, params: nil)
+        #expect(resultA.isStale == true)
+
+        await #expect(throws: Error.self) {
+            _ = try await loader.loadDataWithResult(endpoint: "/api/v1/b", config: nil, params: nil)
+        }
+    }
+
+    @Test("cacheCount reflects current number of cached entries")
+    func cacheCountReflectsEntries() async throws {
+        let mock = await makeMockWithResponse()
+        let loader = DataLoader(
+            networkClient: mock,
+            adminBaseURL: "https://admin.api.test",
+            mobileBaseURL: "https://mobile.api.test",
+            maxCacheSize: 10
+        )
+
+        let empty = await loader.cacheCount
+        #expect(empty == 0)
+
+        _ = try await loader.loadData(endpoint: "/api/v1/x", config: nil)
+        let one = await loader.cacheCount
+        #expect(one == 1)
+
+        await loader.clearCache()
+        let cleared = await loader.cacheCount
+        #expect(cleared == 0)
+    }
 }

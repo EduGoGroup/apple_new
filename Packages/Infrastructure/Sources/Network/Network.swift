@@ -81,7 +81,10 @@ public actor NetworkClient: NetworkClientProtocol {
     // MARK: - Initialization
 
     /// Inicializa el cliente con la configuración por defecto.
-    public init() {
+    ///
+    /// - Parameter pinningDelegate: Optional certificate pinning delegate. When provided,
+    ///   the URLSession will validate server certificates against pinned public keys.
+    public init(pinningDelegate: CertificatePinningDelegate? = nil) {
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 30
         configuration.timeoutIntervalForResource = 60
@@ -90,17 +93,24 @@ public actor NetworkClient: NetworkClientProtocol {
             "User-Agent": "EduGo-iOS/1.0"
         ]
 
-        self.urlSession = URLSession(configuration: configuration)
+        self.urlSession = URLSession(
+            configuration: configuration,
+            delegate: pinningDelegate,
+            delegateQueue: nil
+        )
         self.serializer = CodableSerializer.dtoSerializer
         self.interceptorChain = InterceptorChain([])
         self.maxRetryTimeout = 120
     }
 
     /// Inicializa el cliente con interceptors usando la configuración por defecto.
+    ///
+    /// - Parameter pinningDelegate: Optional certificate pinning delegate.
     public init(
         interceptors: [any RequestInterceptor] = [],
         retryPolicy: (any RetryPolicy)? = nil,
-        maxRetryTimeout: TimeInterval = 120
+        maxRetryTimeout: TimeInterval = 120,
+        pinningDelegate: CertificatePinningDelegate? = nil
     ) {
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 30
@@ -118,7 +128,11 @@ public actor NetworkClient: NetworkClientProtocol {
 
         self.interceptorChain = InterceptorChain(configuredInterceptors)
         self.maxRetryTimeout = maxRetryTimeout
-        self.urlSession = URLSession(configuration: configuration)
+        self.urlSession = URLSession(
+            configuration: configuration,
+            delegate: pinningDelegate,
+            delegateQueue: nil
+        )
         self.serializer = CodableSerializer.dtoSerializer
     }
 
@@ -129,12 +143,14 @@ public actor NetworkClient: NetworkClientProtocol {
     ///   - interceptors: Lista de interceptors
     ///   - maxRetryTimeout: Timeout máximo para reintentos
     ///   - retryPolicy: Política de reintentos
+    ///   - pinningDelegate: Optional certificate pinning delegate.
     public init(
         configuration: URLSessionConfiguration,
         serializer: CodableSerializer? = nil,
         interceptors: [any RequestInterceptor] = [],
         maxRetryTimeout: TimeInterval = 120,
-        retryPolicy: (any RetryPolicy)? = nil
+        retryPolicy: (any RetryPolicy)? = nil,
+        pinningDelegate: CertificatePinningDelegate? = nil
     ) {
         var configuredInterceptors = interceptors
         if let retryPolicy,
@@ -144,7 +160,11 @@ public actor NetworkClient: NetworkClientProtocol {
 
         self.interceptorChain = InterceptorChain(configuredInterceptors)
         self.maxRetryTimeout = maxRetryTimeout
-        self.urlSession = URLSession(configuration: configuration)
+        self.urlSession = URLSession(
+            configuration: configuration,
+            delegate: pinningDelegate,
+            delegateQueue: nil
+        )
         self.serializer = serializer ?? CodableSerializer.dtoSerializer
     }
 

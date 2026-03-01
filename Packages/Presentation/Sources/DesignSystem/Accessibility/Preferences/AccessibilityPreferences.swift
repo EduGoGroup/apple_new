@@ -89,59 +89,9 @@ public final class AccessibilityPreferences {
     // MARK: - Initialization
 
     private init() {
-        // Setup observers for notifications
-        setupObservers()
-    }
-
-    // MARK: - Observer Setup
-
-    private func setupObservers() {
-        // Reduce Motion notifications
-        #if os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
-        NotificationCenter.default.addObserver(
-            forName: UIAccessibility.reduceMotionStatusDidChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            // @Observable will automatically notify changes
-            _ = self?.reduceMotion
-        }
-
-        // High Contrast notifications
-        NotificationCenter.default.addObserver(
-            forName: UIAccessibility.darkerSystemColorsStatusDidChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            _ = self?.highContrast
-        }
-
-        NotificationCenter.default.addObserver(
-            forName: UIAccessibility.differentiateWithoutColorDidChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            _ = self?.differentiateWithoutColor
-        }
-
-        // Content Size Category notifications
-        NotificationCenter.default.addObserver(
-            forName: UIContentSizeCategory.didChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            _ = self?.contentSizeCategory
-        }
-        #elseif os(macOS)
-        NotificationCenter.default.addObserver(
-            forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            _ = self?.highContrast
-            _ = self?.reduceMotion
-        }
-        #endif
+        // All properties are computed and read directly from system APIs.
+        // View-level syncing is handled by syncAccessibilityReduceMotion()
+        // and syncAccessibilityHighContrast() view modifiers.
     }
 
     // MARK: - Convenience Methods

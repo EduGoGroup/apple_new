@@ -197,9 +197,11 @@ private struct AccessibilityHighContrastModifier: ViewModifier {
                     updateHighContrastState()
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: contrastNotificationName)) { _ in
-                Task { @MainActor in
-                    updateHighContrastState()
+            .task {
+                for await _ in NotificationCenter.default.notifications(named: contrastNotificationName) {
+                    await MainActor.run {
+                        updateHighContrastState()
+                    }
                 }
             }
     }

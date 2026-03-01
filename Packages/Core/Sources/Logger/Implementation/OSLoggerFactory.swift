@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import EduFoundation
 
 /// Factory para crear instancias de OSLoggerAdapter con configuraciones predefinidas.
 ///

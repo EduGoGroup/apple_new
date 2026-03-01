@@ -74,8 +74,10 @@ public struct SwitchSchoolContext: Sendable, Equatable {
 
 /// Evento emitido cuando el contexto escolar cambia.
 ///
-/// Este evento es enviado via NotificationCenter para que los observadores
-/// (dashboard, materials list, navigation) puedan actualizarse.
+/// Este evento es publicado via EventBus (CQRS) para que los suscriptores
+/// (cache invalidation, analytics, navigation) puedan reaccionar.
+///
+/// - Note: Para suscripción, usar `ContextSwitchedEvent` via `EventBus`.
 public struct SchoolContextChangedEvent: Sendable, Equatable {
     /// ID del usuario que cambió de contexto
     public let userId: UUID
@@ -91,9 +93,6 @@ public struct SchoolContextChangedEvent: Sendable, Equatable {
 
     /// Timestamp del cambio
     public let timestamp: Date
-
-    /// Nombre de la notificación para NotificationCenter
-    public static let notificationName = Notification.Name("SchoolContextChanged")
 
     /// Inicializa un nuevo evento de cambio de contexto.
     ///
@@ -251,6 +250,7 @@ public actor SwitchSchoolContextUseCase: UseCase {
     private let schoolRepository: SchoolRepositoryProtocol
     private let sessionRepository: UserSessionRepositoryProtocol
     private let cacheInvalidator: CacheInvalidatorProtocol?
+    private let eventBus: EventBus?
 
     // MARK: - Initialization
 
@@ -262,18 +262,21 @@ public actor SwitchSchoolContextUseCase: UseCase {
     ///   - schoolRepository: Repositorio de escuelas
     ///   - sessionRepository: Repositorio de sesión del usuario
     ///   - cacheInvalidator: Invalidador de caches (opcional)
+    ///   - eventBus: EventBus para publicar eventos de dominio (opcional)
     public init(
         membershipRepository: MembershipRepositoryProtocol,
         unitRepository: AcademicUnitRepositoryProtocol,
         schoolRepository: SchoolRepositoryProtocol,
         sessionRepository: UserSessionRepositoryProtocol,
-        cacheInvalidator: CacheInvalidatorProtocol? = nil
+        cacheInvalidator: CacheInvalidatorProtocol? = nil,
+        eventBus: EventBus? = nil
     ) {
         self.membershipRepository = membershipRepository
         self.unitRepository = unitRepository
         self.schoolRepository = schoolRepository
         self.sessionRepository = sessionRepository
         self.cacheInvalidator = cacheInvalidator
+        self.eventBus = eventBus
     }
 
     // MARK: - UseCase Implementation
@@ -337,14 +340,16 @@ public actor SwitchSchoolContextUseCase: UseCase {
         // PASO 8: Invalidar caches (no falla el flujo si hay error)
         await invalidateCaches()
 
-        // PASO 9: Emitir evento de cambio de contexto
-        let event = SchoolContextChangedEvent(
+        // PASO 9: Resolve previous school ID (best-effort) and emit event
+        let previousSchoolId = await resolvePreviousSchoolId(membershipId: currentMembershipId)
+        await emitContextChangedEvent(
             userId: input.userId,
-            oldMembershipId: currentMembershipId ?? input.targetMembershipId,
-            newMembershipId: targetMembership.id,
-            newSchoolId: school.id
+            previousMembershipId: currentMembershipId ?? input.targetMembershipId,
+            newMembership: targetMembership,
+            previousSchoolId: previousSchoolId,
+            unit: unit,
+            school: school
         )
-        await emitContextChangedEvent(event)
 
         // PASO 10: Retornar resultado
         let newContext = SwitchSchoolContext(
@@ -433,19 +438,38 @@ public actor SwitchSchoolContextUseCase: UseCase {
         }
     }
 
-    /// Emite el evento de cambio de contexto via NotificationCenter.
-    @MainActor
-    private func emitContextChangedEvent(_ event: SchoolContextChangedEvent) {
-        NotificationCenter.default.post(
-            name: SchoolContextChangedEvent.notificationName,
-            object: nil,
-            userInfo: [
-                "userId": event.userId,
-                "oldMembershipId": event.oldMembershipId,
-                "newMembershipId": event.newMembershipId,
-                "newSchoolId": event.newSchoolId,
-                "timestamp": event.timestamp
-            ]
+    /// Best-effort resolution of the school ID for a given membership.
+    /// Returns nil if any lookup in the chain fails.
+    private func resolvePreviousSchoolId(membershipId: UUID?) async -> UUID? {
+        guard let membershipId else { return nil }
+        guard let membership = try? await membershipRepository.get(id: membershipId),
+              let unit = try? await unitRepository.get(id: membership.unitID),
+              let school = try? await schoolRepository.get(id: unit.schoolID) else {
+            return nil
+        }
+        return school.id
+    }
+
+    /// Emits the context changed event via the CQRS EventBus.
+    private func emitContextChangedEvent(
+        userId: UUID,
+        previousMembershipId: UUID,
+        newMembership: Membership,
+        previousSchoolId: UUID?,
+        unit: AcademicUnit,
+        school: School
+    ) async {
+        guard let eventBus = eventBus else { return }
+
+        let event = ContextSwitchedEvent(
+            userId: userId,
+            previousMembershipId: previousMembershipId,
+            newMembershipId: newMembership.id,
+            previousSchoolId: previousSchoolId ?? school.id,
+            newSchoolId: school.id,
+            newSchoolName: school.name,
+            newUnitName: unit.displayName
         )
+        await eventBus.publish(event)
     }
 }

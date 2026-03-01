@@ -117,8 +117,8 @@ struct ScreenLoaderSeedTests {
         #expect(count == 3)
     }
 
-    @Test("seedFromBundle skips invalid pattern")
-    func seedSkipsInvalidPattern() async {
+    @Test("seedFromBundle caches unknown pattern with default TTL")
+    func seedCachesUnknownPattern() async {
         let mock = MockNetworkClient()
         let loader = ScreenLoader(networkClient: mock, baseURL: "https://api.test.com")
 
@@ -126,7 +126,7 @@ struct ScreenLoaderSeedTests {
         await loader.seedFromBundle(screens: ["key": dto])
 
         let count = await loader.cacheCount
-        #expect(count == 0)
+        #expect(count == 1)
     }
 
     @Test("seedFromBundle skips login pattern (TTL 0)")

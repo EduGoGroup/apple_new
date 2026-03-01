@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import EduFoundation
 
 /// Configurador centralizado para gestión dinámica del sistema de logging.
 ///

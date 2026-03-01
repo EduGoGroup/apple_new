@@ -42,4 +42,28 @@ struct ControlTypeTests {
             #expect(decoded == expected, "Expected \(expected) for raw value \(rawValue)")
         }
     }
+
+    // MARK: - Unknown Case Tests
+
+    @Test("unknown control type decodes to .unknown with raw value preserved")
+    func unknownControlTypeDecodes() throws {
+        let json = "\"fancy-slider\"".data(using: .utf8)!
+        let decoded = try JSONDecoder().decode(ControlType.self, from: json)
+        #expect(decoded == .unknown("fancy-slider"))
+        #expect(decoded.rawValue == "fancy-slider")
+    }
+
+    @Test("unknown control type roundtrips through encode/decode")
+    func unknownRoundtrip() throws {
+        let original = ControlType.unknown("custom-widget")
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(ControlType.self, from: data)
+        #expect(decoded == original)
+    }
+
+    @Test("unknown control type is Hashable")
+    func unknownHashable() {
+        let set: Set<ControlType> = [.textInput, .unknown("x"), .unknown("y"), .unknown("x")]
+        #expect(set.count == 3)
+    }
 }
