@@ -76,7 +76,7 @@ struct ListPatternRenderer: View {
                 searchSection
             }
 
-            ForEach(Array(filteredItems.enumerated()), id: \.offset) { _, item in
+            ForEach(Array(filteredItems.enumerated()), id: \.offset) { index, item in
                 itemRow(item: item)
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -84,14 +84,25 @@ struct ListPatternRenderer: View {
                             await viewModel.executeEvent(.selectItem, selectedItem: item)
                         }
                     }
+                    .onAppear {
+                        // Prefetch: evaluate when item becomes visible
+                        viewModel.evaluatePrefetch(visibleIndex: index, totalItems: filteredItems.count)
+                    }
             }
 
             if hasMore {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .onAppear {
-                        Task { await viewModel.loadNextPage() }
+                if loadingMore {
+                    // Skeleton rows while loading
+                    ForEach(0..<3, id: \.self) { _ in
+                        skeletonRow
                     }
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .onAppear {
+                            Task { await viewModel.loadNextPage() }
+                        }
+                }
             }
         }
         .listStyle(.plain)
@@ -116,20 +127,32 @@ struct ListPatternRenderer: View {
 
     @ViewBuilder
     private func itemRow(item: [String: EduModels.JSONValue]) -> some View {
-        if let layout = itemLayout {
-            HStack(spacing: 8) {
-                ForEach(layout.slots) { slot in
-                    SlotRenderer(
-                        slot: slot,
-                        data: item,
-                        slotData: screen.slotData,
-                        actions: screen.actions,
-                        onAction: { action in viewModel.executeAction(action) }
-                    )
+        let isPending = item["id"]?.stringValue.map { viewModel.isPendingOptimistic(itemId: $0) } ?? false
+
+        ZStack(alignment: .topTrailing) {
+            if let layout = itemLayout {
+                HStack(spacing: 8) {
+                    ForEach(layout.slots) { slot in
+                        SlotRenderer(
+                            slot: slot,
+                            data: item,
+                            slotData: screen.slotData,
+                            actions: screen.actions,
+                            onAction: { action in viewModel.executeAction(action) }
+                        )
+                    }
                 }
+            } else {
+                defaultItemRow(item: item)
             }
-        } else {
-            defaultItemRow(item: item)
+
+            if isPending {
+                Image(systemName: "arrow.trianglehead.2.clockwise")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .symbolEffect(.rotate, isActive: true)
+                    .padding(4)
+            }
         }
     }
 
@@ -163,5 +186,27 @@ struct ListPatternRenderer: View {
                 value.stringRepresentation.lowercased().contains(query)
             }
         }
+    }
+
+    @ViewBuilder
+    private var skeletonRow: some View {
+        HStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(.quaternary)
+                .frame(width: 40, height: 40)
+            VStack(alignment: .leading, spacing: 4) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(.quaternary)
+                    .frame(height: 14)
+                    .frame(maxWidth: 200)
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(.quaternary)
+                    .frame(height: 12)
+                    .frame(maxWidth: 140)
+            }
+        }
+        .padding(.vertical, 4)
+        .redacted(reason: .placeholder)
+        .listRowSeparator(.hidden)
     }
 }

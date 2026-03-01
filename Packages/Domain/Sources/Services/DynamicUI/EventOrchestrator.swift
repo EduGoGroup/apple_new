@@ -18,17 +18,20 @@ public actor EventOrchestrator {
     private let networkClient: any NetworkClientProtocol
     private let dataLoader: DataLoader
     private let mutationQueue: MutationQueue?
+    private let optimisticManager: OptimisticUpdateManager?
 
     public init(
         registry: ContractRegistry,
         networkClient: any NetworkClientProtocol,
         dataLoader: DataLoader,
-        mutationQueue: MutationQueue? = nil
+        mutationQueue: MutationQueue? = nil,
+        optimisticManager: OptimisticUpdateManager? = nil
     ) {
         self.registry = registry
         self.networkClient = networkClient
         self.dataLoader = dataLoader
         self.mutationQueue = mutationQueue
+        self.optimisticManager = optimisticManager
     }
 
     /// Ejecuta un evento de pantalla.
@@ -213,7 +216,70 @@ public actor EventOrchestrator {
         }
         let body = JSONValue.object(bodyDict)
 
-        // Intentar enviar directamente al API
+        // Optimistic path: for saveNew/saveExisting, return immediately and confirm in background.
+        // The ViewModel registers the snapshot (previousItems) with the OptimisticUpdateManager
+        // upon receiving .optimisticSuccess — the orchestrator only sends the server request.
+        if optimisticManager != nil, (event == .saveNew || event == .saveExisting) {
+            let updateId = UUID().uuidString
+            let message: String
+            switch event {
+            case .saveNew: message = "Created successfully"
+            case .saveExisting: message = "Updated successfully"
+            default: message = "Operation completed"
+            }
+
+            // Include selectedItem id in optimistic data so ViewModel can match edits
+            var optimisticBody = body
+            if event == .saveExisting,
+               case .object(var dict) = optimisticBody,
+               let selectedId = context.selectedItem?["id"] {
+                dict["id"] = selectedId
+                optimisticBody = .object(dict)
+            }
+
+            // Launch background task to send to server
+            let networkClient = self.networkClient
+            let queue = self.mutationQueue
+            let capturedManager = self.optimisticManager
+            Task.detached { [networkClient, queue, capturedManager] in
+                do {
+                    let request: HTTPRequest
+                    switch event {
+                    case .saveExisting:
+                        let bodyData = try JSONEncoder().encode(body)
+                        request = HTTPRequest.put(endpoint).jsonBody(bodyData)
+                    default:
+                        let bodyData = try JSONEncoder().encode(body)
+                        request = HTTPRequest.post(endpoint).jsonBody(bodyData)
+                    }
+                    let _: EmptyResponse = try await networkClient.request(request)
+                    await capturedManager?.confirmUpdate(id: updateId)
+                } catch {
+                    // Try offline queue — keep pending (not confirmed) until actual sync
+                    if let queue {
+                        let mutation = PendingMutation(
+                            endpoint: endpoint,
+                            method: method,
+                            body: body
+                        )
+                        if (try? await queue.enqueue(mutation)) != nil {
+                            // Mutation queued offline — keep optimistic state pending
+                            // It will be confirmed/rolled back when SyncEngine processes it
+                            return
+                        }
+                    }
+                    await capturedManager?.rollbackUpdate(id: updateId)
+                }
+            }
+
+            return .optimisticSuccess(
+                updateId: updateId,
+                message: message,
+                optimisticData: optimisticBody
+            )
+        }
+
+        // Non-optimistic path: send directly to API and wait for response.
         do {
             let request: HTTPRequest
             switch event {
