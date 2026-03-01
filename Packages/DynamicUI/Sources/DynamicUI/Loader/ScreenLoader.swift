@@ -60,9 +60,7 @@ public actor ScreenLoader {
         ) { group in
             for (key, bundleDTO) in screens {
                 group.addTask {
-                    guard let pattern = ScreenPattern(rawValue: bundleDTO.pattern) else {
-                        return nil
-                    }
+                    let pattern = ScreenPattern(rawValue: bundleDTO.pattern)
 
                     let patternTTL = Self.effectiveTTLStatic(
                         for: pattern,
@@ -135,6 +133,8 @@ public actor ScreenLoader {
         case .login: return 0
         case .search, .profile, .modal, .notification, .onboarding, .emptyState:
             return 300
+        case .unknown:
+            return defaultTTL
         }
     }
 

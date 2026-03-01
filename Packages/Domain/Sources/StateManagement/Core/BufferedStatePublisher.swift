@@ -3,6 +3,13 @@
 /// BufferedStatePublisher extends the StatePublisher pattern with pluggable
 /// buffering strategies, allowing fine-grained control over backpressure behavior.
 ///
+/// # Single-Consumer Design
+/// This publisher supports a **single consumer** only. The `stream` property
+/// returns the same underlying AsyncStream on every access. If multiple callers
+/// iterate the stream, each emitted element is delivered to only one of them
+/// (non-deterministic). For multi-consumer scenarios, use `StatePublisher` instead,
+/// which creates independent streams per subscriber.
+///
 /// # Buffering Strategies
 /// - `UnboundedBuffer`: No limit (default, matches StatePublisher behavior)
 /// - `BoundedBuffer`: Fixed capacity, suspends producer when full
@@ -22,7 +29,7 @@
 /// // Producer (may suspend if buffer full)
 /// await publisher.send(UploadState(progress: 0.5))
 ///
-/// // Consumer
+/// // Single consumer
 /// for await state in await publisher.stream {
 ///     updateUI(with: state)
 /// }
@@ -62,6 +69,11 @@ public actor BufferedStatePublisher<State: AsyncState> {
     ///
     /// Creates the stream lazily on first access and starts the bridge task
     /// that transfers elements from the buffer to the stream.
+    ///
+    /// - Important: This publisher is single-consumer. Multiple accesses return
+    ///   the same stream instance. If multiple callers iterate concurrently,
+    ///   each element is delivered to only one consumer. Use `StatePublisher`
+    ///   for multi-consumer scenarios.
     ///
     /// - Returns: A StateStream that emits State values.
     public var stream: StateStream<State> {
