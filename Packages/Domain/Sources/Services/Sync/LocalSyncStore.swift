@@ -30,10 +30,14 @@ public actor LocalSyncStore {
     private var cachedBundle: UserDataBundle?
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
+    private let defaults: UserDefaults
 
     // MARK: - Initialization
 
-    public init() {
+    /// - Parameter defaults: Instancia de `UserDefaults` a usar. En producción usa `.standard`;
+    ///   en tests pasa `UserDefaults(suiteName: UUID().uuidString)!` para aislamiento total.
+    public init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         self.encoder = JSONEncoder()
         self.encoder.dateEncodingStrategy = .iso8601
         self.decoder = JSONDecoder()
@@ -49,7 +53,7 @@ public actor LocalSyncStore {
     public func save(bundle: UserDataBundle) throws {
         do {
             let data = try encoder.encode(bundle)
-            UserDefaults.standard.set(data, forKey: Self.storageKey)
+            defaults.set(data, forKey: Self.storageKey)
             cachedBundle = bundle
         } catch {
             throw SyncError.storageFailed("No se pudo serializar bundle: \(error.localizedDescription)")
@@ -64,7 +68,7 @@ public actor LocalSyncStore {
             return cached
         }
 
-        guard let data = UserDefaults.standard.data(forKey: Self.storageKey) else {
+        guard let data = defaults.data(forKey: Self.storageKey) else {
             return nil
         }
 
@@ -229,7 +233,7 @@ public actor LocalSyncStore {
 
     /// Elimina el bundle persistido.
     public func clear() {
-        UserDefaults.standard.removeObject(forKey: Self.storageKey)
+        defaults.removeObject(forKey: Self.storageKey)
         cachedBundle = nil
     }
 
