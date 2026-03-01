@@ -8,6 +8,14 @@ struct LocalSyncStoreTests {
 
     // MARK: - Fixtures
 
+    /// Crea un `LocalSyncStore` con un `UserDefaults` aislado (suite única por instancia)
+    /// para evitar contaminación de estado entre suites que corren en paralelo.
+    private func makeStore() -> LocalSyncStore {
+        let suiteName = "com.edugo.tests.\(UUID().uuidString)"
+        let isolated = UserDefaults(suiteName: suiteName)!
+        return LocalSyncStore(defaults: isolated)
+    }
+
     private static func makeBundle(
         permissions: [String] = ["read"],
         hashes: [String: String] = ["menu": "h1"]
@@ -37,8 +45,7 @@ struct LocalSyncStoreTests {
 
     @Test("save and restore round-trip preserves bundle data")
     func saveRestoreRoundTrip() async throws {
-        let store = LocalSyncStore()
-        await store.clear()
+        let store = makeStore()
 
         let bundle = Self.makeBundle(
             permissions: ["read", "write"],
@@ -55,14 +62,11 @@ struct LocalSyncStoreTests {
         #expect(restored?.menu.count == 1)
         #expect(restored?.menu[0].key == "dashboard")
         #expect(restored?.availableContexts.count == 1)
-
-        await store.clear()
     }
 
     @Test("restore returns nil when no stored data")
     func restoreReturnsNilWhenEmpty() async {
-        let store = LocalSyncStore()
-        await store.clear()
+        let store = makeStore()
 
         let result = await store.restore()
         #expect(result == nil)
@@ -70,8 +74,7 @@ struct LocalSyncStoreTests {
 
     @Test("save overwrites previous bundle")
     func saveOverwritesPrevious() async throws {
-        let store = LocalSyncStore()
-        await store.clear()
+        let store = makeStore()
 
         let first = Self.makeBundle(permissions: ["read"])
         try await store.save(bundle: first)
@@ -81,35 +84,28 @@ struct LocalSyncStoreTests {
 
         let restored = await store.restore()
         #expect(restored?.permissions == ["read", "write", "delete"])
-
-        await store.clear()
     }
 
     // MARK: - updateBucket
 
     @Test("updateBucket updates hash for known bucket")
     func updateBucketUpdatesHash() async throws {
-        let store = LocalSyncStore()
-        await store.clear()
+        let store = makeStore()
 
         let bundle = Self.makeBundle(hashes: ["menu": "old-hash"])
         try await store.save(bundle: bundle)
 
-        // Update permissions bucket with new hash
         let newPermissions: JSONValue = .array([.string("admin"), .string("edit")])
         try await store.updateBucket(name: "permissions", data: newPermissions, hash: "new-perm-hash")
 
         let restored = await store.restore()
         #expect(restored?.hashes["permissions"] == "new-perm-hash")
         #expect(restored?.hashes["menu"] == "old-hash")
-
-        await store.clear()
     }
 
     @Test("updateBucket updates permissions data")
     func updateBucketUpdatesPermissions() async throws {
-        let store = LocalSyncStore()
-        await store.clear()
+        let store = makeStore()
 
         let bundle = Self.makeBundle(permissions: ["read"])
         try await store.save(bundle: bundle)
@@ -119,14 +115,11 @@ struct LocalSyncStoreTests {
 
         let restored = await store.restore()
         #expect(restored?.permissions == ["admin", "write"])
-
-        await store.clear()
     }
 
     @Test("updateBucket for unknown bucket only updates hash")
     func updateBucketUnknownBucket() async throws {
-        let store = LocalSyncStore()
-        await store.clear()
+        let store = makeStore()
 
         let bundle = Self.makeBundle(permissions: ["read"])
         try await store.save(bundle: bundle)
@@ -136,14 +129,11 @@ struct LocalSyncStoreTests {
         let restored = await store.restore()
         #expect(restored?.hashes["custom_bucket"] == "custom-hash")
         #expect(restored?.permissions == ["read"])
-
-        await store.clear()
     }
 
     @Test("updateBucket throws when no active bundle")
     func updateBucketThrowsWhenEmpty() async {
-        let store = LocalSyncStore()
-        await store.clear()
+        let store = makeStore()
 
         do {
             try await store.updateBucket(name: "menu", data: .null, hash: "h1")
@@ -157,8 +147,7 @@ struct LocalSyncStoreTests {
 
     @Test("clear removes persisted data")
     func clearRemovesData() async throws {
-        let store = LocalSyncStore()
-        await store.clear()
+        let store = makeStore()
 
         let bundle = Self.makeBundle()
         try await store.save(bundle: bundle)
@@ -174,8 +163,7 @@ struct LocalSyncStoreTests {
 
     @Test("clear followed by restore returns nil from memory cache")
     func clearResetsMemoryCache() async throws {
-        let store = LocalSyncStore()
-        await store.clear()
+        let store = makeStore()
 
         let bundle = Self.makeBundle()
         try await store.save(bundle: bundle)

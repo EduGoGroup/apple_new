@@ -12,23 +12,23 @@
 | # | Tarea | Solucion | Esfuerzo | Archivos | Estado |
 |---|-------|----------|----------|----------|--------|
 | 3 | Eliminar NotificationCenter de produccion | [eliminar-notificationcenter.md](soluciones/eliminar-notificationcenter.md) | 0.5 dia | 6 archivos | Pendiente |
-| 4 | Fix NetworkClientBuilder Sendable | CAL-01 | 0.5 hora | 1 archivo | Pendiente |
-| 5 | Fix InterceptableNetworkClient mutacion de URLSessionConfiguration | CAL-03 | 0.5 hora | 1 archivo | Pendiente |
+| 4 | Fix NetworkClientBuilder Sendable | CAL-01 | 0.5 hora | 1 archivo | ✅ Completado |
+| 5 | Fix InterceptableNetworkClient mutacion de URLSessionConfiguration | CAL-03 | 0.5 hora | 1 archivo | ✅ Completado |
 | 6 | Documentar o fix StatePublisher single-consumer | CAL-04 | 1 hora | 2 archivos | Pendiente |
 | 7 | Agregar issuedAt a StoredAuthToken | CAL-05 | 1 hora | 1 archivo + tests | ✅ Completado |
-| 8 | Eliminar fake token en AuthManager o reforzar guard | SEC-02 | 0.5 hora | 1 archivo | Pendiente |
+| 8 | Eliminar fake token en AuthManager o reforzar guard | SEC-02 | 0.5 hora | 1 archivo | ✅ Completado |
 
 ## Prioridad 3: MEDIUM (Estabilidad - Planificar)
 
 | # | Tarea | Solucion | Esfuerzo | Archivos | Estado |
 |---|-------|----------|----------|----------|--------|
 | 9 | Resiliencia DynamicUI (unknown types) | [resiliencia-dynamicui.md](soluciones/resiliencia-dynamicui.md) | 0.5 dia | 3 archivos + tests | Pendiente |
-| 10 | Fix LRU cache (acceso vs insercion) | REN-01 | 1 hora | 1 archivo | Pendiente |
+| 10 | Fix LRU cache (acceso vs insercion) | REN-01 | 1 hora | 1 archivo | ✅ Completado |
 | 11 | Agregar max cache size a DataLoader | REN-02 | 1 hora | 1 archivo | Pendiente |
 | 12 | Fix CircuitBreaker CancellationError | EL-01 | 0.5 hora | 1 archivo | ✅ Completado |
-| 13 | Fix URL concatenation doble slash | EL-04 | 0.5 hora | 2 archivos | Pendiente |
-| 14 | Eliminar protocolos muertos Entity/Model | ARQ-01/02 | 0.5 hora | 2 archivos | Pendiente |
-| 15 | Consolidar LogConfiguration.Environment | ARQ-05 | 1 hora | 2 archivos | Pendiente |
+| 13 | Fix URL concatenation doble slash | EL-04 | 0.5 hora | 2 archivos | ✅ Completado |
+| 14 | Eliminar protocolos muertos Entity/Model | ARQ-01/02 | 0.5 hora | 2 archivos | ✅ Completado |
+| 15 | Consolidar LogConfiguration.Environment | ARQ-05 | 1 hora | 2 archivos | Pendiente (8+ callsites, PR dedicado) |
 | 16 | Fix make test para multi-package | TST-05 | 0.5 hora | 1 archivo | ✅ Completado |
 
 ## Prioridad 4: LOW (Mejoras Opcionales)
@@ -42,7 +42,7 @@
 | 21 | Agregar Equatable a UseCaseError | CAL-09 | 15 min | ✅ Completado |
 | 22 | Simplificar RepositoryError Equatable | CAL-14 | 10 min | ✅ Completado |
 | 23 | Agregar CodingKeys a PaginatedResponse | CAL-13 | 15 min | ✅ Completado |
-| 24 | Documentar NetworkClient.shared como internal | CAL-12 | 5 min | Pendiente |
+| 24 | Documentar NetworkClient.shared como internal | CAL-12 | 5 min | ✅ Completado |
 | 25 | Reemplazar tests cosmeticos placeholder | TST-01 | 30 min | ✅ Completado |
 | 26 | Agregar tests para gaps DynamicUI | TST-04 | 1 hora | Pendiente |
 

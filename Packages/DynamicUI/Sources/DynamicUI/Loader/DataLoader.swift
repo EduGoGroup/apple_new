@@ -44,8 +44,12 @@ public actor DataLoader {
         logger: os.Logger? = nil
     ) {
         self.networkClient = networkClient
-        self.adminBaseURL = adminBaseURL
-        self.mobileBaseURL = mobileBaseURL
+        var sanitizedAdmin = adminBaseURL
+        while sanitizedAdmin.hasSuffix("/") { sanitizedAdmin = String(sanitizedAdmin.dropLast()) }
+        self.adminBaseURL = sanitizedAdmin
+        var sanitizedMobile = mobileBaseURL
+        while sanitizedMobile.hasSuffix("/") { sanitizedMobile = String(sanitizedMobile.dropLast()) }
+        self.mobileBaseURL = sanitizedMobile
         self.logger = logger
     }
 

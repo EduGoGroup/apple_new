@@ -78,14 +78,15 @@ public actor InterceptableNetworkClient: NetworkClientProtocol {
         self.defaultRetryPolicy = defaultRetryPolicy
         self.maxRetryTimeout = maxRetryTimeout
 
-        // Configurar URLSession
-        configuration.timeoutIntervalForRequest = 30
-        configuration.timeoutIntervalForResource = 60
-        configuration.waitsForConnectivity = true
-        configuration.httpAdditionalHeaders = [
+        // Configurar URLSession (copia para no mutar la configuración del caller)
+        let ownedConfig = (configuration.copy() as? URLSessionConfiguration) ?? URLSessionConfiguration.default
+        ownedConfig.timeoutIntervalForRequest = 30
+        ownedConfig.timeoutIntervalForResource = 60
+        ownedConfig.waitsForConnectivity = true
+        ownedConfig.httpAdditionalHeaders = [
             "User-Agent": "EduGo-iOS/1.0"
         ]
-        self.urlSession = URLSession(configuration: configuration)
+        self.urlSession = URLSession(configuration: ownedConfig)
 
         self.serializer = CodableSerializer.dtoSerializer
     }
@@ -401,7 +402,7 @@ public actor InterceptableNetworkClient: NetworkClientProtocol {
 // MARK: - Builder Pattern
 
 /// Builder para crear InterceptableNetworkClient de forma fluida.
-public final class NetworkClientBuilder: @unchecked Sendable {
+public final class NetworkClientBuilder {
     private var interceptors: [any RequestInterceptor] = []
     private var retryPolicy: (any RetryPolicy)?
     private var maxRetryTimeout: TimeInterval = 120

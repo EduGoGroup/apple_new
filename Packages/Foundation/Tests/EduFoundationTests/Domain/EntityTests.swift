@@ -10,18 +10,22 @@ import Testing
 import Foundation
 @testable import EduFoundation
 
-/// Comprehensive test suite for the Entity protocol.
+/// Test suite that validates the domain entity pattern:
+/// - UUID-based identity
+/// - Value equality
+/// - Concurrency safety (Sendable)
 @Suite
 struct EntityTests {
 
     // MARK: - Constants
 
-    /// Number of entities to create in concurrent tests.
     private static let concurrentEntityCount = 50
 
     // MARK: - Test Fixtures
 
-    private struct MockEntity: Entity {
+    /// Minimal domain entity struct following the EduGo pattern:
+    /// `Identifiable + Equatable + Sendable` with UUID-based id and timestamps.
+    private struct MockEntity: Identifiable, Equatable, Sendable {
         let id: UUID
         let createdAt: Date
         let updatedAt: Date
