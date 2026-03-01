@@ -179,6 +179,5 @@ struct PrefetchCoordinatorTests {
     func defaultConfig() {
         let config = PrefetchCoordinator.PrefetchConfig.default
         #expect(config.prefetchThreshold == 5)
-        #expect(config.maxConcurrentPrefetches == 1)
     }
 }

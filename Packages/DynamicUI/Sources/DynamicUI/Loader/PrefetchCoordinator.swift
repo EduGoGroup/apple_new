@@ -6,13 +6,11 @@ public actor PrefetchCoordinator {
 
     public struct PrefetchConfig: Sendable {
         public let prefetchThreshold: Int  // Items before end to trigger
-        public let maxConcurrentPrefetches: Int
 
-        public static let `default` = PrefetchConfig(prefetchThreshold: 5, maxConcurrentPrefetches: 1)
+        public static let `default` = PrefetchConfig(prefetchThreshold: 5)
 
-        public init(prefetchThreshold: Int = 5, maxConcurrentPrefetches: Int = 1) {
+        public init(prefetchThreshold: Int = 5) {
             self.prefetchThreshold = prefetchThreshold
-            self.maxConcurrentPrefetches = maxConcurrentPrefetches
         }
     }
 
@@ -20,6 +18,7 @@ public actor PrefetchCoordinator {
     private var prefetchTask: Task<Void, Never>?
     private var isPrefetching: Bool = false
     private var prefetchedData: [[String: JSONValue]]?
+    private var generation: Int = 0
 
     public init(config: PrefetchConfig = .default) {
         self.config = config
@@ -37,14 +36,20 @@ public actor PrefetchCoordinator {
               remainingItems <= config.prefetchThreshold else { return }
 
         isPrefetching = true
+        generation += 1
+        let currentGeneration = generation
         prefetchTask = Task {
             do {
                 let newItems = try await loadAction()
+                // Only store if this generation is still current (not cancelled)
+                guard !Task.isCancelled, self.generation == currentGeneration else { return }
                 self.prefetchedData = newItems
             } catch {
                 // Prefetch failed silently — will retry on next evaluation
             }
-            self.isPrefetching = false
+            if self.generation == currentGeneration {
+                self.isPrefetching = false
+            }
         }
     }
 

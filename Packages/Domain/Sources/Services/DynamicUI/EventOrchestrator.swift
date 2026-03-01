@@ -217,7 +217,9 @@ public actor EventOrchestrator {
         let body = JSONValue.object(bodyDict)
 
         // Optimistic path: for saveNew/saveExisting, return immediately and confirm in background.
-        if let optimisticManager, (event == .saveNew || event == .saveExisting) {
+        // The ViewModel registers the snapshot (previousItems) with the OptimisticUpdateManager
+        // upon receiving .optimisticSuccess — the orchestrator only sends the server request.
+        if optimisticManager != nil, (event == .saveNew || event == .saveExisting) {
             let updateId = UUID().uuidString
             let message: String
             switch event {
@@ -226,20 +228,20 @@ public actor EventOrchestrator {
             default: message = "Operation completed"
             }
 
-            // Register the optimistic update (previous/optimistic items are set by the ViewModel).
-            await optimisticManager.registerOptimisticUpdate(
-                id: updateId,
-                screenKey: context.screenKey,
-                event: event,
-                previousItems: [],
-                optimisticItems: [],
-                fieldValues: context.fieldValues
-            )
+            // Include selectedItem id in optimistic data so ViewModel can match edits
+            var optimisticBody = body
+            if event == .saveExisting,
+               case .object(var dict) = optimisticBody,
+               let selectedId = context.selectedItem?["id"] {
+                dict["id"] = selectedId
+                optimisticBody = .object(dict)
+            }
 
             // Launch background task to send to server
             let networkClient = self.networkClient
             let queue = self.mutationQueue
-            Task.detached { [networkClient, queue] in
+            let capturedManager = self.optimisticManager
+            Task.detached { [networkClient, queue, capturedManager] in
                 do {
                     let request: HTTPRequest
                     switch event {
@@ -251,9 +253,9 @@ public actor EventOrchestrator {
                         request = HTTPRequest.post(endpoint).jsonBody(bodyData)
                     }
                     let _: EmptyResponse = try await networkClient.request(request)
-                    await optimisticManager.confirmUpdate(id: updateId)
+                    await capturedManager?.confirmUpdate(id: updateId)
                 } catch {
-                    // Try offline queue before rolling back
+                    // Try offline queue — keep pending (not confirmed) until actual sync
                     if let queue {
                         let mutation = PendingMutation(
                             endpoint: endpoint,
@@ -261,18 +263,19 @@ public actor EventOrchestrator {
                             body: body
                         )
                         if (try? await queue.enqueue(mutation)) != nil {
-                            await optimisticManager.confirmUpdate(id: updateId)
+                            // Mutation queued offline — keep optimistic state pending
+                            // It will be confirmed/rolled back when SyncEngine processes it
                             return
                         }
                     }
-                    await optimisticManager.rollbackUpdate(id: updateId)
+                    await capturedManager?.rollbackUpdate(id: updateId)
                 }
             }
 
             return .optimisticSuccess(
                 updateId: updateId,
                 message: message,
-                optimisticData: body
+                optimisticData: optimisticBody
             )
         }
 

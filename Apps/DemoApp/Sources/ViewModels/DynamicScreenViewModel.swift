@@ -34,7 +34,10 @@ final class DynamicScreenViewModel {
     // MARK: - Optimistic UI
 
     var optimisticManager: OptimisticUpdateManager?
-    private(set) var pendingOptimisticIds: Set<String> = []
+    /// Tracks item IDs (not update IDs) that have pending optimistic updates.
+    private(set) var pendingOptimisticItemIds: Set<String> = []
+    /// Maps updateId -> itemId for reverse lookup on confirm/rollback.
+    private var optimisticUpdateToItemId: [String: String] = [:]
     private var optimisticObserverTask: Task<Void, Never>?
 
     // MARK: - Form State
@@ -380,7 +383,7 @@ final class DynamicScreenViewModel {
 
     /// Returns true if the given item ID has a pending optimistic update.
     func isPendingOptimistic(itemId: String) -> Bool {
-        pendingOptimisticIds.contains(itemId)
+        pendingOptimisticItemIds.contains(itemId)
     }
 
     /// Starts observing the optimistic manager status stream for resolved updates.
@@ -402,25 +405,36 @@ final class DynamicScreenViewModel {
     }
 
     private func handleOptimisticEvent(_ event: OptimisticStatusEvent) {
+        // Only handle events for updates owned by this ViewModel
+        guard let itemId = optimisticUpdateToItemId[event.updateId] else { return }
+
         switch event.status {
         case .confirmed:
-            pendingOptimisticIds.remove(event.updateId)
+            pendingOptimisticItemIds.remove(itemId)
+            optimisticUpdateToItemId.removeValue(forKey: event.updateId)
 
         case .rolledBack:
-            pendingOptimisticIds.remove(event.updateId)
-            // Restore previous items
+            pendingOptimisticItemIds.remove(itemId)
+            optimisticUpdateToItemId.removeValue(forKey: event.updateId)
+            // Restore previous items, preserving existing hasMore
             if let previousItems = event.previousItems {
-                let pageSize = 20
+                let existingHasMore: Bool
+                if case .success(_, let hasMore, _) = dataState {
+                    existingHasMore = hasMore
+                } else {
+                    existingHasMore = false
+                }
                 dataState = .success(
                     items: previousItems,
-                    hasMore: previousItems.count >= pageSize,
+                    hasMore: existingHasMore,
                     loadingMore: false
                 )
             }
             ToastManager.shared.showError("Save failed. Changes reverted.")
 
         case .timedOut:
-            pendingOptimisticIds.remove(event.updateId)
+            pendingOptimisticItemIds.remove(itemId)
+            optimisticUpdateToItemId.removeValue(forKey: event.updateId)
             ToastManager.shared.showWarning("Save is taking longer than expected.")
 
         case .pending:
@@ -477,16 +491,21 @@ final class DynamicScreenViewModel {
 
             // Snapshot current items for rollback
             var currentItems: [[String: JSONValue]] = []
-            if case .success(let items, _, _) = dataState {
+            var existingHasMore = false
+            if case .success(let items, let hasMore, _) = dataState {
                 currentItems = items
+                existingHasMore = hasMore
             }
+
+            // Determine the item ID for tracking pending state
+            var trackedItemId = updateId  // Fallback to updateId for new items
 
             // Apply optimistic change to dataState
             if case .object(let bodyDict) = optimisticData {
-                // Determine if this is a new item or an update to existing
                 let existingId = bodyDict["id"]?.stringValue
                 if let existingId, currentItems.contains(where: { $0["id"]?.stringValue == existingId }) {
-                    // Update existing item
+                    // Update existing item — merge fields
+                    trackedItemId = existingId
                     let updatedItems = currentItems.map { item -> [String: JSONValue] in
                         if item["id"]?.stringValue == existingId {
                             var merged = item
@@ -497,41 +516,34 @@ final class DynamicScreenViewModel {
                         }
                         return item
                     }
-                    let pageSize = 20
-                    dataState = .success(
-                        items: updatedItems,
-                        hasMore: updatedItems.count >= pageSize,
-                        loadingMore: false
-                    )
+                    dataState = .success(items: updatedItems, hasMore: existingHasMore, loadingMore: false)
                 } else {
                     // Prepend new item
                     var newItem = bodyDict
                     if newItem["id"] == nil {
                         newItem["id"] = .string(updateId)
                     }
+                    trackedItemId = newItem["id"]?.stringValue ?? updateId
                     let updatedItems = [newItem] + currentItems
-                    let pageSize = 20
-                    dataState = .success(
-                        items: updatedItems,
-                        hasMore: updatedItems.count >= pageSize,
-                        loadingMore: false
-                    )
+                    dataState = .success(items: updatedItems, hasMore: existingHasMore, loadingMore: false)
                 }
             }
 
-            // Track pending state and register snapshot with manager
-            pendingOptimisticIds.insert(updateId)
+            // Track pending state by item ID and register snapshot with manager
+            pendingOptimisticItemIds.insert(trackedItemId)
+            optimisticUpdateToItemId[updateId] = trackedItemId
+
             if let manager = optimisticManager {
+                guard case .ready(let screen) = screenState else { break }
                 Task {
-                    var optimisticItems: [[String: JSONValue]] = []
-                    if case .success(let items, _, _) = dataState {
-                        optimisticItems = items
-                    }
-                    // The orchestrator already registered the update; we don't re-register.
-                    // The observer will handle confirmed/rolledBack/timedOut events.
-                    _ = optimisticItems // suppress unused warning
-                    _ = currentItems
-                    _ = manager
+                    await manager.registerOptimisticUpdate(
+                        id: updateId,
+                        screenKey: screen.screenKey,
+                        event: isEditing ? .saveExisting : .saveNew,
+                        previousItems: currentItems,
+                        optimisticItems: [],
+                        fieldValues: fieldValues
+                    )
                 }
             }
 

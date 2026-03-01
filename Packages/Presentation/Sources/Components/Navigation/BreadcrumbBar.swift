@@ -52,12 +52,18 @@ public struct BreadcrumbBar: View {
                 ForEach(entries) { entry in
                     let isLast = entry.id == entries.last?.id
 
-                    BreadcrumbChip(entry: entry, isLast: isLast)
-                        .onTapGesture {
-                            if !isLast {
-                                onNavigate(entry.id)
-                            }
+                    if isLast {
+                        BreadcrumbChip(entry: entry, isLast: true)
+                    } else {
+                        Button {
+                            onNavigate(entry.id)
+                        } label: {
+                            BreadcrumbChip(entry: entry, isLast: false)
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text(entry.title))
+                        .accessibilityHint(Text("Navigate to \(entry.title)"))
+                    }
 
                     if !isLast {
                         Image(systemName: "chevron.right")

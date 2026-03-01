@@ -91,7 +91,11 @@ struct MainScreen: View {
         .task { await loadInitialData() }
         .task { await observeMenuChanges() }
         .task { await observeBreadcrumbChanges() }
-        .onChange(of: selectedItemKey) { _, _ in
+        .onChange(of: selectedItemKey) { oldValue, _ in
+            // Only clear breadcrumbs when the user changes menu section
+            // (not when breadcrumb navigation itself updates selectedItemKey).
+            // Menu-driven changes come from sidebar/tab bar with a different oldValue.
+            guard oldValue != nil else { return }
             Task { await breadcrumbTracker.clear() }
         }
         .onChange(of: deepLinkHandler?.pendingDeepLink) { _, newLink in
