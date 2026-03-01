@@ -189,6 +189,47 @@ struct ScreenLoaderTests {
         #expect(count == 2)
     }
 
+    @Test("LRU eviction evicts least-recently-accessed, not least-recently-inserted")
+    func lruEvictionUsesAccessOrder() async throws {
+        let mock = MockNetworkClient()
+        await mock.setDataResponse(data: Self.sampleScreenJSON)
+
+        let loader = ScreenLoader(
+            networkClient: mock,
+            baseURL: "https://api.test.com",
+            maxCacheSize: 2,
+            cacheExpiration: 3600
+        )
+
+        // Load screen_a (request #1) — inserted first
+        _ = try await loader.loadScreen(key: "screen_a")
+        try await Task.sleep(for: .milliseconds(20))
+
+        // Load screen_b (request #2) — inserted second
+        _ = try await loader.loadScreen(key: "screen_b")
+        try await Task.sleep(for: .milliseconds(20))
+
+        // Re-access screen_a from cache → updates lastAccessedAt to most recent
+        _ = try await loader.loadScreen(key: "screen_a")
+        let requestsBeforeEviction = await mock.requestCount
+        #expect(requestsBeforeEviction == 2) // a and b loaded from network
+
+        try await Task.sleep(for: .milliseconds(20))
+
+        // Load screen_c (request #3) → triggers LRU eviction
+        // screen_b has the oldest lastAccessedAt → it must be evicted
+        _ = try await loader.loadScreen(key: "screen_c")
+        #expect(await loader.cacheCount == 2)
+
+        // screen_a is still cached → no new network request
+        _ = try await loader.loadScreen(key: "screen_a")
+        #expect(await mock.requestCount == 3) // only a, b, c
+
+        // screen_b was evicted → triggers a new network request
+        _ = try await loader.loadScreen(key: "screen_b")
+        #expect(await mock.requestCount == 4) // b reloaded
+    }
+
     @Test("clearCache removes all entries")
     func clearCacheRemovesAll() async throws {
         let mock = MockNetworkClient()

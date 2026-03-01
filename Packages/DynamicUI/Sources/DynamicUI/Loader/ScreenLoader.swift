@@ -33,7 +33,9 @@ public actor ScreenLoader {
         logger: os.Logger? = nil
     ) {
         self.networkClient = networkClient
-        self.baseURL = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
+        var sanitizedURL = baseURL
+        while sanitizedURL.hasSuffix("/") { sanitizedURL = String(sanitizedURL.dropLast()) }
+        self.baseURL = sanitizedURL
         self.maxCacheSize = maxCacheSize
         self.defaultTTL = cacheExpiration
         self.logger = logger
@@ -200,6 +202,7 @@ public actor ScreenLoader {
             // If error and we have stale cache, return it
             if let cached = memoryCache[key] {
                 logger?.debug("[EduGo.Cache.Screen] STALE FALLBACK: \(key, privacy: .public)")
+                memoryCache[key]?.lastAccessedAt = Date()
                 return cached.screen
             }
             logger?.debug("[EduGo.Cache.Screen] MISS: \(key, privacy: .public)")
@@ -266,6 +269,7 @@ public actor ScreenLoader {
             if let lruKey = memoryCache.min(by: { $0.value.lastAccessedAt < $1.value.lastAccessedAt })?.key {
                 memoryCache.removeValue(forKey: lruKey)
                 etagCache.removeValue(forKey: lruKey)
+                bundleVersions.removeValue(forKey: lruKey)
             }
         }
 

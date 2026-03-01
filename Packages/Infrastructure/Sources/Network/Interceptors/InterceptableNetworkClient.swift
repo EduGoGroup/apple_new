@@ -79,7 +79,7 @@ public actor InterceptableNetworkClient: NetworkClientProtocol {
         self.maxRetryTimeout = maxRetryTimeout
 
         // Configurar URLSession (copia para no mutar la configuración del caller)
-        let ownedConfig = configuration.copy() as! URLSessionConfiguration
+        let ownedConfig = (configuration.copy() as? URLSessionConfiguration) ?? URLSessionConfiguration.default
         ownedConfig.timeoutIntervalForRequest = 30
         ownedConfig.timeoutIntervalForResource = 60
         ownedConfig.waitsForConnectivity = true
