@@ -15,7 +15,8 @@ import EduInfrastructure
 /// ## Arquitectura
 /// - Usa un `NetworkClientProtocol` **sin interceptor de auth** para llamadas
 ///   de login y refresh (evita dependencia circular).
-/// - Persiste `AuthToken` en UserDefaults para restaurar sesión entre lanzamientos.
+/// - Persiste `AuthToken` en Keychain para almacenamiento seguro entre lanzamientos.
+/// - Migra automáticamente tokens de UserDefaults a Keychain en el primer uso.
 /// - Expone `sessionStream` para observar cambios de sesión (login/logout/expired).
 ///
 /// ## Ejemplo
@@ -47,6 +48,9 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
     private let networkClient: any NetworkClientProtocol
     private let apiConfig: APIConfiguration
 
+    /// Keychain manager for secure token persistence.
+    private let keychainManager: KeychainManager
+
     /// Token actual en memoria.
     private var currentToken: AuthToken?
 
@@ -58,6 +62,9 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
 
     /// Flag para evitar refresh recursivo.
     private var isRefreshing = false
+
+    /// Whether migration from UserDefaults has been attempted.
+    private var hasMigratedFromUserDefaults = false
 
     // MARK: - Session Stream
 
@@ -83,12 +90,15 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
     /// - Parameters:
     ///   - networkClient: Cliente de red **sin** interceptor de auth.
     ///   - apiConfig: Configuración de API con URLs base.
+    ///   - keychainManager: Keychain manager for secure storage. Defaults to a shared instance.
     public init(
         networkClient: any NetworkClientProtocol,
-        apiConfig: APIConfiguration
+        apiConfig: APIConfiguration,
+        keychainManager: KeychainManager = KeychainManager()
     ) {
         self.networkClient = networkClient
         self.apiConfig = apiConfig
+        self.keychainManager = keychainManager
     }
 
     // MARK: - Login
@@ -111,7 +121,7 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
         currentContext = AuthContext.from(dto: response.activeContext)
         userInfo = response.user
 
-        persistToken(token)
+        await persistToken(token)
         sessionContinuation?.yield(.loggedIn)
 
         return response
@@ -120,13 +130,13 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
     // MARK: - Logout
 
     /// Cierra la sesión del usuario.
-    public func logout() {
+    public func logout() async {
         currentToken = nil
         currentContext = nil
         userInfo = nil
         isRefreshing = false
 
-        clearPersistedToken()
+        await clearPersistedToken()
         sessionContinuation?.yield(.loggedOut)
     }
 
@@ -149,29 +159,30 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
 
     // MARK: - Restore Session
 
-    /// Intenta restaurar la sesión desde almacenamiento local.
+    /// Intenta restaurar la sesión desde Keychain.
+    ///
+    /// On first call, migrates any existing tokens from UserDefaults to Keychain
+    /// and removes the UserDefaults entries.
     ///
     /// - Returns: `true` si se restauró un token válido (no expirado).
     @discardableResult
-    public func restoreSession() -> Bool {
-        guard let data = UserDefaults.standard.data(forKey: Self.tokenStorageKey) else {
-            return false
+    public func restoreSession() async -> Bool {
+        // Migrate from UserDefaults to Keychain on first use
+        if !hasMigratedFromUserDefaults {
+            await migrateFromUserDefaults()
+            hasMigratedFromUserDefaults = true
         }
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-
-        guard let token = try? decoder.decode(AuthToken.self, from: data),
+        guard let token = try? await keychainManager.retrieve(AuthToken.self, for: Self.tokenStorageKey),
               !token.isExpired else {
-            clearPersistedToken()
+            await clearPersistedToken()
             return false
         }
 
         currentToken = token
 
-        // Restaurar contexto si existe
-        if let contextData = UserDefaults.standard.data(forKey: Self.contextStorageKey) {
-            currentContext = try? decoder.decode(AuthContext.self, from: contextData)
+        if let context = try? await keychainManager.retrieve(AuthContext.self, for: Self.contextStorageKey) {
+            currentContext = context
         }
 
         return true
@@ -203,7 +214,7 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
         currentContext = AuthContext.from(dto: response.activeContext)
         userInfo = response.user
 
-        persistToken(newToken)
+        await persistToken(newToken)
         sessionContinuation?.yield(.contextSwitched)
     }
 
@@ -227,7 +238,7 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
 
             let newToken = AuthToken.from(response: response)
             currentToken = newToken
-            persistToken(newToken)
+            await persistToken(newToken)
 
             return newToken.accessToken
         } catch {
@@ -246,27 +257,53 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
         currentToken = nil
         currentContext = nil
         userInfo = nil
-        clearPersistedToken()
+        await clearPersistedToken()
         sessionContinuation?.yield(.expired)
     }
 
     // MARK: - Private Helpers
 
-    private func persistToken(_ token: AuthToken) {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        if let data = try? encoder.encode(token) {
-            UserDefaults.standard.set(data, forKey: Self.tokenStorageKey)
-        }
-        if let context = currentContext,
-           let contextData = try? encoder.encode(context) {
-            UserDefaults.standard.set(contextData, forKey: Self.contextStorageKey)
+    private func persistToken(_ token: AuthToken) async {
+        try? await keychainManager.save(token, for: Self.tokenStorageKey)
+        if let context = currentContext {
+            try? await keychainManager.save(context, for: Self.contextStorageKey)
         }
     }
 
-    private func clearPersistedToken() {
-        UserDefaults.standard.removeObject(forKey: Self.tokenStorageKey)
-        UserDefaults.standard.removeObject(forKey: Self.contextStorageKey)
+    private func clearPersistedToken() async {
+        try? await keychainManager.delete(for: Self.tokenStorageKey)
+        try? await keychainManager.delete(for: Self.contextStorageKey)
+    }
+
+    // MARK: - UserDefaults → Keychain Migration
+
+    /// Migrates tokens from UserDefaults to Keychain (one-time).
+    /// After successful migration, removes entries from UserDefaults.
+    private func migrateFromUserDefaults() async {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        // Migrate token — only remove from UserDefaults after confirmed Keychain write
+        if let tokenData = UserDefaults.standard.data(forKey: Self.tokenStorageKey),
+           let token = try? decoder.decode(AuthToken.self, from: tokenData) {
+            do {
+                try await keychainManager.save(token, for: Self.tokenStorageKey)
+                UserDefaults.standard.removeObject(forKey: Self.tokenStorageKey)
+            } catch {
+                // Keep UserDefaults value if Keychain save fails to avoid losing the session.
+            }
+        }
+
+        // Migrate context — same safe pattern
+        if let contextData = UserDefaults.standard.data(forKey: Self.contextStorageKey),
+           let context = try? decoder.decode(AuthContext.self, from: contextData) {
+            do {
+                try await keychainManager.save(context, for: Self.contextStorageKey)
+                UserDefaults.standard.removeObject(forKey: Self.contextStorageKey)
+            } catch {
+                // Keep UserDefaults value if Keychain save fails to avoid losing the context.
+            }
+        }
     }
 }
 

@@ -21,11 +21,15 @@ public actor DataLoader {
     private let networkClient: NetworkClientProtocol
     private let adminBaseURL: String
     private let mobileBaseURL: String
+    private let maxCacheSize: Int
 
     // MARK: - Offline Support
 
     /// Cache en memoria: clave → (datos, timestamp).
     private var cache: [String: (data: [String: EduModels.JSONValue], timestamp: Date)] = [:]
+
+    /// Number of entries currently in the cache.
+    public var cacheCount: Int { cache.count }
 
     /// Indica si hay conexión de red disponible.
     public private(set) var isOnline: Bool = true
@@ -41,6 +45,7 @@ public actor DataLoader {
         networkClient: NetworkClientProtocol,
         adminBaseURL: String,
         mobileBaseURL: String,
+        maxCacheSize: Int = 50,
         logger: os.Logger? = nil
     ) {
         self.networkClient = networkClient
@@ -50,6 +55,7 @@ public actor DataLoader {
         var sanitizedMobile = mobileBaseURL
         while sanitizedMobile.hasSuffix("/") { sanitizedMobile = String(sanitizedMobile.dropLast()) }
         self.mobileBaseURL = sanitizedMobile
+        self.maxCacheSize = max(1, maxCacheSize)
         self.logger = logger
     }
 
@@ -88,6 +94,7 @@ public actor DataLoader {
         if !isOnline {
             // Offline: retornar desde cache
             if let cached = cache[cacheKey] {
+                cache[cacheKey] = (data: cached.data, timestamp: Date())
                 logger?.debug("[EduGo.Cache.Data] STALE (offline): \(cacheKey, privacy: .public)")
                 return DataLoadResult(data: cached.data, isStale: true)
             }
@@ -104,11 +111,12 @@ public actor DataLoader {
             }
 
             let data = try await fetchAndNormalize(request)
-            cache[cacheKey] = (data: data, timestamp: Date())
+            insertIntoCache(key: cacheKey, data: data)
             return DataLoadResult(data: data, isStale: false)
         } catch {
             // Fallback a cache si el fetch falla
             if let cached = cache[cacheKey] {
+                cache[cacheKey] = (data: cached.data, timestamp: Date())
                 logger?.debug("[EduGo.Cache.Data] STALE FALLBACK: \(cacheKey, privacy: .public)")
                 return DataLoadResult(data: cached.data, isStale: true)
             }
@@ -152,6 +160,22 @@ public actor DataLoader {
     }
 
     // MARK: - Private
+
+    /// Inserts data into cache, evicting the oldest entry if at capacity.
+    private func insertIntoCache(key: String, data: [String: EduModels.JSONValue]) {
+        // If the key already exists, just update it (no eviction needed)
+        if cache[key] != nil {
+            cache[key] = (data: data, timestamp: Date())
+            return
+        }
+        // Evict oldest entry if at capacity
+        if cache.count >= maxCacheSize {
+            if let oldest = cache.min(by: { $0.value.timestamp < $1.value.timestamp }) {
+                cache.removeValue(forKey: oldest.key)
+            }
+        }
+        cache[key] = (data: data, timestamp: Date())
+    }
 
     private func buildCacheKey(endpoint: String, params: [String: String]?) -> String {
         var key = endpoint

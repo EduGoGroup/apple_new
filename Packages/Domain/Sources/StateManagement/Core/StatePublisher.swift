@@ -1,39 +1,51 @@
-/// A thread-safe actor that publishes state updates to subscribers via AsyncSequence.
+import Foundation
+
+/// A thread-safe actor that publishes state updates to multiple subscribers via AsyncSequence.
 ///
 /// StatePublisher provides a reactive pattern for emitting states from use cases
-/// to UI layers. It uses AsyncStream internally with unbounded buffering,
-/// optimized for UI consumption patterns where states are processed quickly.
+/// to UI layers. It supports multiple concurrent subscribers — each access to
+/// `stream` creates an independent AsyncStream that receives all future emissions.
+///
+/// # Multi-Consumer Support
+/// Unlike a raw AsyncStream (which is single-consumer), StatePublisher maintains
+/// a set of continuations and fans out each emitted state to all active subscribers.
+/// Terminated continuations are cleaned up lazily on the next `send()`.
 ///
 /// # Thread Safety
 /// All state mutations and emissions are actor-isolated, ensuring thread-safe
 /// access from any concurrent context.
 ///
 /// # Backpressure Strategy
-/// Uses unbounded buffering by default, suitable for UI-driven consumption
-/// where new states replace outdated ones. For high-frequency emissions,
-/// consider implementing state coalescing at the consumer level.
+/// Uses unbounded buffering per subscriber, suitable for UI-driven consumption
+/// where new states replace outdated ones. For high-frequency emissions with
+/// backpressure control, use `BufferedStatePublisher` instead.
 ///
 /// # Example
 /// ```swift
 /// let publisher = StatePublisher<UploadState>()
 ///
-/// // Emit states from use case
-/// await publisher.send(UploadState(progress: 0.5, status: .uploading))
-///
-/// // Subscribe from UI
-/// for await state in await publisher.stream {
-///     updateUI(with: state)
+/// // Multiple subscribers can observe independently
+/// Task {
+///     for await state in await publisher.stream {
+///         updateProgressBar(with: state)
+///     }
 /// }
+///
+/// Task {
+///     for await state in await publisher.stream {
+///         logState(state)
+///     }
+/// }
+///
+/// // Emit states from use case — all subscribers receive each emission
+/// await publisher.send(UploadState(progress: 0.5, status: .uploading))
 /// ```
 public actor StatePublisher<State: AsyncState> {
     /// The current state value, if any has been emitted.
     public private(set) var currentState: State?
 
-    /// The underlying continuation for emitting values to the stream.
-    private var continuation: AsyncStream<State>.Continuation?
-
-    /// The stream that subscribers can iterate over.
-    private var _stream: AsyncStream<State>?
+    /// Active continuations keyed by unique ID for multi-consumer support.
+    private var continuations: [UUID: AsyncStream<State>.Continuation] = [:]
 
     /// Indicates whether the publisher has been terminated.
     private var isTerminated: Bool = false
@@ -41,26 +53,46 @@ public actor StatePublisher<State: AsyncState> {
     /// Creates a new StatePublisher ready to emit states.
     public init() {}
 
-    /// The AsyncStream for subscribing to state updates.
+    /// Creates a new independent AsyncStream for subscribing to state updates.
     ///
-    /// Creates the stream lazily on first access. Multiple accesses return
-    /// the same stream instance.
+    /// Each access creates a new stream that independently receives all future
+    /// state emissions. Multiple consumers can subscribe simultaneously, and each
+    /// will receive every emitted state.
     ///
-    /// - Returns: An AsyncStream that emits State values.
+    /// If the publisher has already been terminated, the returned stream
+    /// completes immediately.
+    ///
+    /// - Returns: A StateStream that emits State values.
     public var stream: StateStream<State> {
-        if _stream == nil {
-            let (stream, continuation) = AsyncStream<State>.makeStream(
-                bufferingPolicy: .unbounded
-            )
-            self._stream = stream
-            self.continuation = continuation
+        let id = UUID()
+        let (stream, continuation) = AsyncStream<State>.makeStream(
+            bufferingPolicy: .unbounded
+        )
+
+        if isTerminated {
+            continuation.finish()
+        } else {
+            continuations[id] = continuation
+            // Clean up immediately when subscriber stops iterating
+            continuation.onTermination = { [weak self] _ in
+                Task { [weak self] in
+                    await self?.removeContinuation(id: id)
+                }
+            }
         }
-        return StateStream(sequence: _stream!)
+
+        return StateStream(sequence: stream)
+    }
+
+    /// The number of currently active subscribers.
+    public var subscriberCount: Int {
+        continuations.count
     }
 
     /// Emits a new state to all subscribers.
     ///
-    /// The state is stored as currentState and emitted to the stream.
+    /// The state is stored as currentState and emitted to every active stream.
+    /// Terminated continuations are cleaned up automatically.
     /// If the publisher has been terminated, this method has no effect.
     ///
     /// - Parameter state: The state to emit.
@@ -68,7 +100,7 @@ public actor StatePublisher<State: AsyncState> {
         guard !isTerminated else { return }
 
         currentState = state
-        continuation?.yield(state)
+        yieldToAll(state)
     }
 
     /// Emits a new state only if it differs from the current state.
@@ -87,22 +119,24 @@ public actor StatePublisher<State: AsyncState> {
         }
 
         currentState = state
-        continuation?.yield(state)
+        yieldToAll(state)
         return true
     }
 
-    /// Terminates the publisher, completing the stream for all subscribers.
+    /// Terminates the publisher, completing all streams for all subscribers.
     ///
-    /// After calling finish(), no more states can be emitted. Subscribers
-    /// iterating the stream will complete their iteration.
+    /// After calling finish(), no more states can be emitted. All subscribers
+    /// iterating their streams will complete their iteration.
     ///
     /// This method is idempotent - calling it multiple times has no effect.
     public func finish() {
         guard !isTerminated else { return }
 
         isTerminated = true
-        continuation?.finish()
-        continuation = nil
+        for continuation in continuations.values {
+            continuation.finish()
+        }
+        continuations.removeAll()
     }
 
     /// Terminates the publisher with an error.
@@ -116,7 +150,30 @@ public actor StatePublisher<State: AsyncState> {
         guard !isTerminated else { return }
 
         isTerminated = true
-        continuation?.finish()
-        continuation = nil
+        for continuation in continuations.values {
+            continuation.finish()
+        }
+        continuations.removeAll()
+    }
+
+    // MARK: - Private Helpers
+
+    /// Removes a continuation by ID (called from onTermination handler).
+    private func removeContinuation(id: UUID) {
+        continuations.removeValue(forKey: id)
+    }
+
+    /// Yields a state to all active continuations and cleans up terminated ones.
+    private func yieldToAll(_ state: State) {
+        var terminatedIds: [UUID] = []
+        for (id, continuation) in continuations {
+            let result = continuation.yield(state)
+            if case .terminated = result {
+                terminatedIds.append(id)
+            }
+        }
+        for id in terminatedIds {
+            continuations.removeValue(forKey: id)
+        }
     }
 }

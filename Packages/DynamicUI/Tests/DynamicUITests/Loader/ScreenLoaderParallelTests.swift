@@ -90,21 +90,21 @@ struct ScreenLoaderParallelTests {
         #expect(gradesScreen.version == 1)
     }
 
-    @Test("parallel seedFromBundle skips invalid patterns correctly")
-    func parallelSeedSkipsInvalid() async {
+    @Test("parallel seedFromBundle caches unknown patterns and skips login")
+    func parallelSeedCachesUnknownSkipsLogin() async {
         let mock = MockNetworkClient()
         let loader = ScreenLoader(networkClient: mock, baseURL: "https://api.test.com")
 
         let screens: [String: ScreenBundleDTO] = [
             "valid": Self.makeBundleDTO(screenKey: "valid", pattern: "dashboard"),
-            "invalid": Self.makeBundleDTO(screenKey: "invalid", pattern: "nonexistent"),
+            "unknown": Self.makeBundleDTO(screenKey: "unknown", pattern: "nonexistent"),
             "login": Self.makeBundleDTO(screenKey: "login", pattern: "login"),
         ]
 
         await loader.seedFromBundle(screens: screens)
 
         let count = await loader.cacheCount
-        #expect(count == 1) // Only "valid" should be cached
+        #expect(count == 2) // "valid" + "unknown" cached; "login" skipped (TTL 0)
     }
 
     @Test("parallel seedFromBundle preserves slotData and handlerKey")

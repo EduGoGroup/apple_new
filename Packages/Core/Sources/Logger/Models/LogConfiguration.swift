@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import EduFoundation
 
 /// Configuración global del sistema de logging.
 ///
@@ -29,21 +30,8 @@ public struct LogConfiguration: Sendable {
 
     // MARK: - Environment
 
-    /// Entorno de ejecución de la aplicación.
-    public enum Environment: String, Sendable {
-        case development
-        case staging
-        case production
-
-        /// Nivel de log por defecto para este entorno.
-        public var defaultLevel: LogLevel {
-            switch self {
-            case .development: return .debug
-            case .staging: return .info
-            case .production: return .warning
-            }
-        }
-    }
+    /// Consolidated: uses `AppEnvironment` from EduFoundation as the single source of truth.
+    public typealias Environment = AppEnvironment
 
     // MARK: - Properties
 
@@ -142,21 +130,9 @@ public struct LogConfiguration: Sendable {
 
     // MARK: - Environment Detection
 
-    /// Detecta automáticamente el entorno de ejecución.
-    ///
-    /// Usa variables de entorno y flags de compilación para determinar
-    /// el entorno actual.
+    /// Delegates to `AppEnvironment.detect()` for consistent environment detection.
     private static func detectEnvironment() -> Environment {
-        #if DEBUG
-        return .development
-        #else
-        // En release, intentar detectar via environment variable
-        if let envString = ProcessInfo.processInfo.environment["EDUGO_ENVIRONMENT"],
-           let env = Environment(rawValue: envString.lowercased()) {
-            return env
-        }
-        return .production
-        #endif
+        AppEnvironment.detect()
     }
 
     // MARK: - Presets
@@ -225,5 +201,19 @@ public extension LogConfiguration {
             categoryOverrides: categoryOverrides,
             includeMetadata: includeMetadata
         )
+    }
+}
+
+// MARK: - AppEnvironment + Log Defaults
+
+extension AppEnvironment {
+
+    /// Default log level for this environment.
+    public var defaultLevel: LogLevel {
+        switch self {
+        case .development: return .debug
+        case .staging: return .info
+        case .production: return .warning
+        }
     }
 }

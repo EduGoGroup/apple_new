@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import EduFoundation
 
 /// Configuración del logger basada en variables de entorno.
 ///
