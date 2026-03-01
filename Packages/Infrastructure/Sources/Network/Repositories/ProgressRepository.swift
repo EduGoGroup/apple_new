@@ -107,7 +107,7 @@ public actor ProgressRepository: ProgressRepositoryProtocol {
     ///   - baseURL: URL base del API (ej: "https://api.edugo.com").
     public init(client: any NetworkClientProtocol, baseURL: String) {
         self.client = client
-        self.baseURL = baseURL
+        self.baseURL = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
     }
 
     // MARK: - Public Methods

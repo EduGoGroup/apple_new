@@ -18,6 +18,8 @@ public actor ScreenLoader {
     public struct CachedScreen: Sendable {
         public let screen: ScreenDefinition
         public let cachedAt: Date
+        /// Timestamp del último acceso de lectura. Usado por la evicción LRU real.
+        public internal(set) var lastAccessedAt: Date
         public let etag: String?
         public let expiresAt: Date
         public let bundleVersion: String?
@@ -31,7 +33,7 @@ public actor ScreenLoader {
         logger: os.Logger? = nil
     ) {
         self.networkClient = networkClient
-        self.baseURL = baseURL
+        self.baseURL = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
         self.maxCacheSize = maxCacheSize
         self.defaultTTL = cacheExpiration
         self.logger = logger
@@ -110,6 +112,7 @@ public actor ScreenLoader {
             memoryCache[key] = CachedScreen(
                 screen: screen,
                 cachedAt: now,
+                lastAccessedAt: now,
                 etag: nil,
                 expiresAt: now.addingTimeInterval(patternTTL),
                 bundleVersion: version
@@ -151,6 +154,7 @@ public actor ScreenLoader {
         if let cached = memoryCache[key],
            Date() < cached.expiresAt {
             logger?.debug("[EduGo.Cache.Screen] L1 HIT: \(key, privacy: .public)")
+            memoryCache[key]?.lastAccessedAt = Date()
             return cached.screen
         }
 
@@ -175,7 +179,8 @@ public actor ScreenLoader {
                 let now = Date()
                 memoryCache[key] = CachedScreen(
                     screen: cached.screen,
-                    cachedAt: now,
+                    cachedAt: cached.cachedAt,
+                    lastAccessedAt: now,
                     etag: cached.etag,
                     expiresAt: now.addingTimeInterval(patternTTL),
                     bundleVersion: cached.bundleVersion
@@ -256,11 +261,11 @@ public actor ScreenLoader {
     }
 
     private func cacheScreen(key: String, screen: ScreenDefinition, etag: String?) {
-        // LRU eviction if at capacity
+        // LRU eviction: eliminar la entrada con el acceso más antiguo (least-recently-used)
         if memoryCache.count >= maxCacheSize {
-            if let oldestKey = memoryCache.min(by: { $0.value.cachedAt < $1.value.cachedAt })?.key {
-                memoryCache.removeValue(forKey: oldestKey)
-                etagCache.removeValue(forKey: oldestKey)
+            if let lruKey = memoryCache.min(by: { $0.value.lastAccessedAt < $1.value.lastAccessedAt })?.key {
+                memoryCache.removeValue(forKey: lruKey)
+                etagCache.removeValue(forKey: lruKey)
             }
         }
 
@@ -269,6 +274,7 @@ public actor ScreenLoader {
         memoryCache[key] = CachedScreen(
             screen: screen,
             cachedAt: now,
+            lastAccessedAt: now,
             etag: etag,
             expiresAt: now.addingTimeInterval(patternTTL),
             bundleVersion: nil

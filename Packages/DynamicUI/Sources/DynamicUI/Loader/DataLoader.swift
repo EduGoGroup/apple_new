@@ -44,8 +44,8 @@ public actor DataLoader {
         logger: os.Logger? = nil
     ) {
         self.networkClient = networkClient
-        self.adminBaseURL = adminBaseURL
-        self.mobileBaseURL = mobileBaseURL
+        self.adminBaseURL = adminBaseURL.hasSuffix("/") ? String(adminBaseURL.dropLast()) : adminBaseURL
+        self.mobileBaseURL = mobileBaseURL.hasSuffix("/") ? String(mobileBaseURL.dropLast()) : mobileBaseURL
         self.logger = logger
     }
 

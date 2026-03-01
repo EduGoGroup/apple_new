@@ -36,7 +36,11 @@ public actor NetworkClient: NetworkClientProtocol {
 
     // MARK: - Singleton
 
-    /// Instancia compartida del cliente de red.
+    /// Instancia compartida del cliente de red, para uso interno y testing.
+    ///
+    /// - Important: En producción, usa siempre el `NetworkClient` inyectado por
+    ///   `ServiceContainer` en lugar de este singleton. `shared` existe para
+    ///   facilitar tests de integración y ejemplos en la documentación.
     public static let shared = NetworkClient(
         interceptors: [],
         retryPolicy: ExponentialBackoffRetryPolicy(maxRetryCount: 3)
