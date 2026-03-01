@@ -124,10 +124,20 @@ public actor KeychainManager {
 
             let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
 
-            guard addStatus == errSecSuccess else {
+            switch addStatus {
+            case errSecSuccess:
+                return
+            case errSecDuplicateItem:
+                // Race: another caller inserted between our update and add.
+                // Retry update to complete the upsert.
+                let retryStatus = SecItemUpdate(query as CFDictionary, updateAttributes as CFDictionary)
+                guard retryStatus == errSecSuccess else {
+                    throw KeychainError.unhandledError(status: retryStatus)
+                }
+                return
+            default:
                 throw KeychainError.unhandledError(status: addStatus)
             }
-            return
         }
 
         throw KeychainError.unhandledError(status: updateStatus)

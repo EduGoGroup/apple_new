@@ -283,18 +283,26 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
-        // Migrate token
+        // Migrate token — only remove from UserDefaults after confirmed Keychain write
         if let tokenData = UserDefaults.standard.data(forKey: Self.tokenStorageKey),
            let token = try? decoder.decode(AuthToken.self, from: tokenData) {
-            try? await keychainManager.save(token, for: Self.tokenStorageKey)
-            UserDefaults.standard.removeObject(forKey: Self.tokenStorageKey)
+            do {
+                try await keychainManager.save(token, for: Self.tokenStorageKey)
+                UserDefaults.standard.removeObject(forKey: Self.tokenStorageKey)
+            } catch {
+                // Keep UserDefaults value if Keychain save fails to avoid losing the session.
+            }
         }
 
-        // Migrate context
+        // Migrate context — same safe pattern
         if let contextData = UserDefaults.standard.data(forKey: Self.contextStorageKey),
            let context = try? decoder.decode(AuthContext.self, from: contextData) {
-            try? await keychainManager.save(context, for: Self.contextStorageKey)
-            UserDefaults.standard.removeObject(forKey: Self.contextStorageKey)
+            do {
+                try await keychainManager.save(context, for: Self.contextStorageKey)
+                UserDefaults.standard.removeObject(forKey: Self.contextStorageKey)
+            } catch {
+                // Keep UserDefaults value if Keychain save fails to avoid losing the context.
+            }
         }
     }
 }

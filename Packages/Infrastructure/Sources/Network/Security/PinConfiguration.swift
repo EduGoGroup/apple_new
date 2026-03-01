@@ -83,7 +83,7 @@ public struct PinConfiguration: Sendable {
         case "production":
             return .production
         default:
-            return .development
+            return .production
         }
     }
 }

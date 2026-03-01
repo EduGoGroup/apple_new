@@ -340,11 +340,13 @@ public actor SwitchSchoolContextUseCase: UseCase {
         // PASO 8: Invalidar caches (no falla el flujo si hay error)
         await invalidateCaches()
 
-        // PASO 9: Emitir evento de cambio de contexto via EventBus
+        // PASO 9: Resolve previous school ID (best-effort) and emit event
+        let previousSchoolId = await resolvePreviousSchoolId(membershipId: currentMembershipId)
         await emitContextChangedEvent(
             userId: input.userId,
             previousMembershipId: currentMembershipId ?? input.targetMembershipId,
             newMembership: targetMembership,
+            previousSchoolId: previousSchoolId,
             unit: unit,
             school: school
         )
@@ -436,11 +438,24 @@ public actor SwitchSchoolContextUseCase: UseCase {
         }
     }
 
+    /// Best-effort resolution of the school ID for a given membership.
+    /// Returns nil if any lookup in the chain fails.
+    private func resolvePreviousSchoolId(membershipId: UUID?) async -> UUID? {
+        guard let membershipId else { return nil }
+        guard let membership = try? await membershipRepository.get(id: membershipId),
+              let unit = try? await unitRepository.get(id: membership.unitID),
+              let school = try? await schoolRepository.get(id: unit.schoolID) else {
+            return nil
+        }
+        return school.id
+    }
+
     /// Emits the context changed event via the CQRS EventBus.
     private func emitContextChangedEvent(
         userId: UUID,
         previousMembershipId: UUID,
         newMembership: Membership,
+        previousSchoolId: UUID?,
         unit: AcademicUnit,
         school: School
     ) async {
@@ -450,7 +465,7 @@ public actor SwitchSchoolContextUseCase: UseCase {
             userId: userId,
             previousMembershipId: previousMembershipId,
             newMembershipId: newMembership.id,
-            previousSchoolId: school.id,
+            previousSchoolId: previousSchoolId ?? school.id,
             newSchoolId: school.id,
             newSchoolName: school.name,
             newUnitName: unit.displayName

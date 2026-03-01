@@ -55,7 +55,7 @@ public actor DataLoader {
         var sanitizedMobile = mobileBaseURL
         while sanitizedMobile.hasSuffix("/") { sanitizedMobile = String(sanitizedMobile.dropLast()) }
         self.mobileBaseURL = sanitizedMobile
-        self.maxCacheSize = maxCacheSize
+        self.maxCacheSize = max(1, maxCacheSize)
         self.logger = logger
     }
 

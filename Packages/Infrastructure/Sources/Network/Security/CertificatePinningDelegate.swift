@@ -18,7 +18,7 @@ import CommonCrypto
 ///     delegateQueue: nil
 /// )
 /// ```
-public final class CertificatePinningDelegate: NSObject, URLSessionDelegate, Sendable {
+public final class CertificatePinningDelegate: NSObject, URLSessionDelegate, @unchecked Sendable {
 
     private let configuration: PinConfiguration
 

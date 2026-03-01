@@ -73,6 +73,12 @@ public actor StatePublisher<State: AsyncState> {
             continuation.finish()
         } else {
             continuations[id] = continuation
+            // Clean up immediately when subscriber stops iterating
+            continuation.onTermination = { [weak self] _ in
+                Task { [weak self] in
+                    await self?.removeContinuation(id: id)
+                }
+            }
         }
 
         return StateStream(sequence: stream)
@@ -151,6 +157,11 @@ public actor StatePublisher<State: AsyncState> {
     }
 
     // MARK: - Private Helpers
+
+    /// Removes a continuation by ID (called from onTermination handler).
+    private func removeContinuation(id: UUID) {
+        continuations.removeValue(forKey: id)
+    }
 
     /// Yields a state to all active continuations and cleans up terminated ones.
     private func yieldToAll(_ state: State) {

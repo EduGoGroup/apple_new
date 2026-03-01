@@ -64,8 +64,9 @@ struct PinConfigurationTests {
         let prod = PinConfiguration.forEnvironment("production")
         #expect(prod.domainPins.count == 3)
 
+        // Unknown environment defaults to production (fail-safe)
         let unknown = PinConfiguration.forEnvironment("unknown")
-        #expect(unknown.domainPins.isEmpty)
+        #expect(unknown.domainPins.count == 3)
     }
 
     @Test("Each environment has backup pins for rotation")

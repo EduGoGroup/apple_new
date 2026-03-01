@@ -71,7 +71,7 @@ public enum ControlType: Sendable, Hashable {
     }
 
     /// Mapping from known case to raw string.
-    var rawValue: String {
+    public var rawValue: String {
         switch self {
         case .textInput: return "text-input"
         case .emailInput: return "email-input"

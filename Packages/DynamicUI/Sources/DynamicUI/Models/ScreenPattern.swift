@@ -40,7 +40,7 @@ public enum ScreenPattern: Sendable, Hashable {
         }
     }
 
-    var rawValue: String {
+    public var rawValue: String {
         switch self {
         case .login: return "login"
         case .form: return "form"

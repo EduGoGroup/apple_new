@@ -34,7 +34,7 @@ public enum ActionTrigger: Sendable, Hashable {
         "long_press": .longPress,
     ]
 
-    var rawValue: String {
+    public var rawValue: String {
         switch self {
         case .buttonClick: return "button_click"
         case .itemClick: return "item_click"
@@ -90,7 +90,7 @@ public enum ActionType: Sendable, Hashable {
         "OPEN_URL": .openUrl,
     ]
 
-    var rawValue: String {
+    public var rawValue: String {
         switch self {
         case .navigate: return "NAVIGATE"
         case .navigateBack: return "NAVIGATE_BACK"
