@@ -53,6 +53,21 @@ struct SchoolSelectionScreen: View {
                 }
             }
         }
+        .onAppear {
+            debugLog("DEBUG [SchoolSelectionScreen] onAppear")
+            debugLog("DEBUG [SchoolSelectionScreen] contexts.count = \(contexts.count)")
+            debugLog("DEBUG [SchoolSelectionScreen] schools.count = \(schools.count)")
+            debugLog("DEBUG [SchoolSelectionScreen] useSuperAdminMode = \(useSuperAdminMode)")
+            debugLog("DEBUG [SchoolSelectionScreen] currentSchoolId = \(currentSchoolId ?? "nil")")
+            
+            if useSuperAdminMode {
+                for (index, school) in schools.enumerated() {
+                    let id = school["id"]?.stringValue ?? "no-id"
+                    let name = school["name"]?.stringValue ?? "no-name"
+                    debugLog("DEBUG [SchoolSelectionScreen] School[\(index)]: id=\(id), name=\(name)")
+                }
+            }
+        }
     }
 
     // MARK: - Contexts Mode
