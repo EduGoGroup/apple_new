@@ -69,6 +69,9 @@ struct PatternRouter: View {
                 title: screen.slotData?["title"]?.stringRepresentation ?? "Sin contenido",
                 description: screen.slotData?["description"]?.stringRepresentation ?? ""
             )
+        
+        case .unknown(let rawValue):
+            FallbackRenderer(patternName: rawValue)
         }
     }
 }

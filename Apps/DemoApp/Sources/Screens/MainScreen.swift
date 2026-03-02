@@ -6,6 +6,17 @@ import EduDomain
 import EduCore
 import EduModels
 
+// MARK: - School Selection Data
+
+/// Wrapper para los datos del modal de selección de escuelas.
+/// Necesario para usar `.sheet(item:)` y asegurar que los datos estén actualizados.
+struct SchoolSelectionData: Identifiable {
+    let id = UUID()
+    let contexts: [UserContextDTO]
+    let currentSchoolId: String?
+    let schools: [[String: JSONValue]]
+}
+
 // MARK: - Main Screen
 
 /// Pantalla principal con navegacion adaptativa basada en menu dinamico.
@@ -19,7 +30,7 @@ struct MainScreen: View {
 
     @State private var menuItems: [MenuItem] = []
     @State private var selectedItemKey: String?
-    @State private var showSchoolSelection = false
+    @State private var schoolSelectionData: SchoolSelectionData?
     @State private var userName: String = ""
     @State private var roleName: String = ""
     @State private var schoolName: String?
@@ -44,7 +55,13 @@ struct MainScreen: View {
                     roleName: roleName,
                     schoolName: schoolName,
                     showSchoolSwitch: roleName == "super_admin" || availableContexts.count > 1,
-                    onSchoolSwitch: { showSchoolSelection = true }
+                    onSchoolSwitch: {
+                        schoolSelectionData = SchoolSelectionData(
+                            contexts: availableContexts,
+                            currentSchoolId: currentSchoolId,
+                            schools: allSchools
+                        )
+                    }
                 )
             },
             sidebarFooter: {
@@ -103,13 +120,13 @@ struct MainScreen: View {
                 navigateToDeepLink(link)
             }
         }
-        .sheet(isPresented: $showSchoolSelection) {
+        .sheet(item: $schoolSelectionData) { data in
             SchoolSelectionScreen(
-                contexts: availableContexts,
-                currentSchoolId: currentSchoolId,
-                schools: allSchools,
+                contexts: data.contexts,
+                currentSchoolId: data.currentSchoolId,
+                schools: data.schools,
                 onSelect: { context in
-                    showSchoolSelection = false
+                    schoolSelectionData = nil
                     Task { await switchContext(context) }
                 }
             )
@@ -173,8 +190,17 @@ struct MainScreen: View {
             if roleName == "super_admin" && currentSchoolId == nil {
                 debugLog("DEBUG [MainScreen] super_admin without school — loading schools from API")
                 await loadSchoolsForSuperAdmin()
+                debugLog("DEBUG [MainScreen] After load: allSchools.count = \(allSchools.count)")
+                debugLog("DEBUG [MainScreen] availableContexts.count = \(availableContexts.count)")
                 if !allSchools.isEmpty {
-                    showSchoolSelection = true
+                    debugLog("DEBUG [MainScreen] ✅ Showing school selection modal")
+                    schoolSelectionData = SchoolSelectionData(
+                        contexts: availableContexts,
+                        currentSchoolId: currentSchoolId,
+                        schools: allSchools
+                    )
+                } else {
+                    debugLog("DEBUG [MainScreen] ⚠️ allSchools is empty, modal will NOT be shown")
                 }
             }
         } else {
@@ -184,27 +210,58 @@ struct MainScreen: View {
 
     private func loadSchoolsForSuperAdmin() async {
         do {
+            debugLog("DEBUG [MainScreen] loadSchoolsForSuperAdmin — calling admin:/api/v1/schools")
             let raw = try await container.dataLoader.loadData(
                 endpoint: "admin:/api/v1/schools",
                 config: nil
             )
+            debugLog("DEBUG [MainScreen] raw response keys: \(raw.keys.sorted())")
+            
             var schools: [[String: JSONValue]] = []
-            for key in ["items", "data", "results"] {
+            
+            // Try common pagination keys
+            for key in ["items", "data", "results", "schools"] {
                 if case .array(let array) = raw[key] {
+                    debugLog("DEBUG [MainScreen] found array at key '\(key)' with \(array.count) items")
                     schools = array.compactMap { element in
-                        if case .object(let dict) = element { return dict }
+                        if case .object(let dict) = element {
+                            debugLog("DEBUG [MainScreen] - parsed object with keys: \(dict.keys.sorted())")
+                            return dict
+                        }
                         return nil
                     }
                     break
                 }
             }
+            
+            // If no array found, check if raw itself is a valid school object
             if schools.isEmpty {
-                schools = [raw]
+                debugLog("DEBUG [MainScreen] no array found in common keys")
+                
+                // Check if raw has expected school fields (id, name)
+                if raw["id"] != nil || raw["name"] != nil {
+                    debugLog("DEBUG [MainScreen] raw looks like a single school object, wrapping in array")
+                    schools = [raw]
+                } else {
+                    debugLog("DEBUG [MainScreen] raw structure unrecognized:")
+                    for (key, value) in raw {
+                        debugLog("DEBUG [MainScreen]   \(key): \(value)")
+                    }
+                }
             }
+            
             allSchools = schools
-            debugLog("DEBUG [MainScreen] loaded \(schools.count) schools for super_admin")
+            debugLog("DEBUG [MainScreen] ✅ Loaded \(schools.count) schools for super_admin")
+            
+            // Log all schools for debugging
+            for (index, school) in schools.enumerated() {
+                let id = school["id"]?.stringValue ?? "nil"
+                let name = school["name"]?.stringValue ?? "nil"
+                let city = school["city"]?.stringValue ?? "nil"
+                debugLog("DEBUG [MainScreen] School[\(index)]: id=\(id), name=\(name), city=\(city)")
+            }
         } catch {
-            debugLog("DEBUG [MainScreen] failed to load schools: \(error)")
+            debugLog("DEBUG [MainScreen] ❌ Failed to load schools: \(error)")
         }
     }
 
@@ -218,7 +275,7 @@ struct MainScreen: View {
     }
 
     private func observeBreadcrumbChanges() async {
-        for await trail in breadcrumbTracker.trailStream {
+        for await trail in await breadcrumbTracker.trailStream {
             breadcrumbEntries = trail.map { entry in
                 BreadcrumbBarEntry(
                     id: entry.id,
