@@ -18,10 +18,12 @@ NC='\033[0m'
 ping_api() {
   local name=$1
   local base_url=$2
+  local tmpfile
+  tmpfile=$(mktemp)
 
   echo -n "  $name ... "
 
-  response=$(curl -s -o /tmp/edugo_response -w "%{http_code}" \
+  response=$(curl -s -o "$tmpfile" -w "%{http_code}" \
     --max-time $TIMEOUT \
     "$base_url$HEALTH_PATH" 2>/dev/null)
 
@@ -30,9 +32,11 @@ ping_api() {
   elif [ "$response" = "000" ]; then
     echo -e "${RED}TIMEOUT / sin respuesta${NC} (>${TIMEOUT}s)"
   else
-    body=$(cat /tmp/edugo_response 2>/dev/null | head -c 200)
+    body=$(head -c 200 "$tmpfile" 2>/dev/null)
     echo -e "${YELLOW}HTTP $response${NC} → $body"
   fi
+
+  rm -f "$tmpfile"
 }
 
 echo ""

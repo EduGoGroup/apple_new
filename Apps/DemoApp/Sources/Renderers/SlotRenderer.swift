@@ -146,8 +146,12 @@ struct SlotRenderer: View {
                 }
             
             case .unknown(let rawValue):
+                #if DEBUG
                 Text("Unknown control: \(rawValue)")
                     .foregroundStyle(.secondary)
+                #else
+                EmptyView()
+                #endif
             }
         }
     }

@@ -51,6 +51,9 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Claude local config (machine-specific)
+.claude/settings.local.json
+
 # Code coverage
 *.gcno
 *.gcda
