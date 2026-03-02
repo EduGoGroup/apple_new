@@ -32,7 +32,7 @@ URLs de producción (aún no desplegadas):
 ### Ejecutar con Azure (Staging) - Por Defecto
 
 ```bash
-cd /Users/jhoanmedina/source/EduGo/EduUI/apple_new/Apps/DemoApp
+cd Apps/DemoApp
 make run
 # o explícitamente:
 make run-staging
@@ -41,14 +41,14 @@ make run-staging
 ### Ejecutar con Localhost (Development)
 
 ```bash
-cd /Users/jhoanmedina/source/EduGo/EduUI/apple_new/Apps/DemoApp
+cd Apps/DemoApp
 make run-dev
 ```
 
 ### Ejecutar con Production
 
 ```bash
-cd /Users/jhoanmedina/source/EduGo/EduUI/apple_new/Apps/DemoApp
+cd Apps/DemoApp
 make run-prod
 ```
 
@@ -97,7 +97,7 @@ Ahora puedes cambiar entre schemes desde el selector en la barra superior de Xco
 El ambiente se detecta automáticamente en este orden de prioridad:
 
 1. Variable de entorno `EDUGO_ENVIRONMENT` (staging, development, production)
-2. Build configuration (`DEBUG` → development, `RELEASE` → production)
+2. Default: `.staging` (Azure) — si la variable no está configurada
 
 Para ver qué ambiente está usando la app, revisa los logs al iniciar:
 
@@ -116,9 +116,9 @@ print("📡 API Config: \(apiConfiguration)")
 
 Las APIs en Azure están en tier **free** y tienen tiempo de inactividad. Si las APIs no responden:
 
-1. Ejecuta el script de warm-up:
+1. Ejecuta el script de warm-up (desde la raíz del repo `EduUI`):
    ```bash
-   /Users/jhoanmedina/source/EduGo/EduUI/kmp_new/warm-up-apis.sh
+   ./kmp_new/warm-up-apis.sh
    ```
 
 2. O espera ~30-60 segundos en el primer request (cold start)

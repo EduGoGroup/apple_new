@@ -215,51 +215,51 @@ struct MainScreen: View {
                 endpoint: "admin:/api/v1/schools",
                 config: nil
             )
+            #if DEBUG
             debugLog("DEBUG [MainScreen] raw response keys: \(raw.keys.sorted())")
-            
+            #endif
+
             var schools: [[String: JSONValue]] = []
-            
+
             // Try common pagination keys
             for key in ["items", "data", "results", "schools"] {
                 if case .array(let array) = raw[key] {
                     debugLog("DEBUG [MainScreen] found array at key '\(key)' with \(array.count) items")
                     schools = array.compactMap { element in
-                        if case .object(let dict) = element {
-                            debugLog("DEBUG [MainScreen] - parsed object with keys: \(dict.keys.sorted())")
-                            return dict
-                        }
+                        if case .object(let dict) = element { return dict }
                         return nil
                     }
                     break
                 }
             }
-            
+
             // If no array found, check if raw itself is a valid school object
             if schools.isEmpty {
                 debugLog("DEBUG [MainScreen] no array found in common keys")
-                
+
                 // Check if raw has expected school fields (id, name)
                 if raw["id"] != nil || raw["name"] != nil {
                     debugLog("DEBUG [MainScreen] raw looks like a single school object, wrapping in array")
                     schools = [raw]
                 } else {
-                    debugLog("DEBUG [MainScreen] raw structure unrecognized:")
-                    for (key, value) in raw {
-                        debugLog("DEBUG [MainScreen]   \(key): \(value)")
-                    }
+                    debugLog("DEBUG [MainScreen] raw structure unrecognized — keys: \(raw.keys.sorted())")
                 }
             }
-            
+
             allSchools = schools
             debugLog("DEBUG [MainScreen] ✅ Loaded \(schools.count) schools for super_admin")
-            
-            // Log all schools for debugging
-            for (index, school) in schools.enumerated() {
+
+            #if DEBUG
+            let maxLoggedSchools = 5
+            for (index, school) in schools.prefix(maxLoggedSchools).enumerated() {
                 let id = school["id"]?.stringValue ?? "nil"
                 let name = school["name"]?.stringValue ?? "nil"
-                let city = school["city"]?.stringValue ?? "nil"
-                debugLog("DEBUG [MainScreen] School[\(index)]: id=\(id), name=\(name), city=\(city)")
+                debugLog("DEBUG [MainScreen] School[\(index)]: id=\(id), name=\(name)")
             }
+            if schools.count > maxLoggedSchools {
+                debugLog("DEBUG [MainScreen] …y \(schools.count - maxLoggedSchools) escuelas más no registradas")
+            }
+            #endif
         } catch {
             debugLog("DEBUG [MainScreen] ❌ Failed to load schools: \(error)")
         }
