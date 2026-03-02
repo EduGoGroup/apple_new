@@ -11,22 +11,23 @@ import Foundation
 /// Entorno de ejecucion de la aplicacion.
 ///
 /// Determina la configuracion de APIs, logging y comportamiento general.
-/// Se detecta automaticamente basado en flags de compilacion y variables
-/// de entorno, pero puede ser proporcionado explicitamente.
+/// Se detecta automaticamente basado en variables de entorno.
 ///
 /// ## Deteccion automatica:
-/// - **DEBUG build**: `.development`
-/// - **RELEASE build**: lee `EDUGO_ENVIRONMENT`, default `.production`
+/// - **Default**: `.staging` (Azure APIs) - para desarrollo normal
+/// - **Override**: Variable de entorno `EDUGO_ENVIRONMENT`
 ///
 /// ## Variable de entorno:
 /// ```
-/// EDUGO_ENVIRONMENT=staging  // development, staging, production
+/// EDUGO_ENVIRONMENT=development  // para localhost
+/// EDUGO_ENVIRONMENT=staging      // para Azure (default)
+/// EDUGO_ENVIRONMENT=production   // para producción
 /// ```
 ///
 /// ## Uso en Xcode:
 /// Edit Scheme → Run → Arguments → Environment Variables
 /// - Key: `EDUGO_ENVIRONMENT`
-/// - Value: `staging`
+/// - Value: `development` (para localhost) o `staging` (para Azure)
 public enum AppEnvironment: String, Sendable, CaseIterable {
     case development
     case staging
@@ -36,17 +37,18 @@ public enum AppEnvironment: String, Sendable, CaseIterable {
     ///
     /// Prioridad:
     /// 1. Variable de entorno `EDUGO_ENVIRONMENT`
-    /// 2. Flag de compilacion (`DEBUG` → development, else → production)
+    /// 2. Default: `.staging` (Azure APIs) - para desarrollo normal
+    ///
+    /// **Nota**: Por defecto apunta a staging (Azure) para facilitar el desarrollo.
+    /// Si necesitas localhost, establece `EDUGO_ENVIRONMENT=development`
     public static func detect() -> AppEnvironment {
         if let envString = ProcessInfo.processInfo.environment["EDUGO_ENVIRONMENT"],
            let env = AppEnvironment(rawValue: envString.lowercased()) {
             return env
         }
 
-        #if DEBUG
-        return .development
-        #else
-        return .production
-        #endif
+        // Default a staging (Azure) para facilitar desarrollo
+        // Si necesitas localhost: EDUGO_ENVIRONMENT=development
+        return .staging
     }
 }
