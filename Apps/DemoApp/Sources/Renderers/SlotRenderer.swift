@@ -144,6 +144,10 @@ struct SlotRenderer: View {
                 } else {
                     Text(resolvedValue?.stringRepresentation ?? "")
                 }
+            
+            case .unknown(let rawValue):
+                Text("Unknown control: \(rawValue)")
+                    .foregroundStyle(.secondary)
             }
         }
     }
