@@ -25,24 +25,24 @@ public struct DataConfig: Codable, Sendable {
     }
 }
 
-/// Configuración de paginación offset-based.
+/// Configuración de paginación page-based.
+///
+/// El backend devuelve `{"items_key": [...], "total": N, "page": N, "limit": N}`.
+/// Query params: `?page=1&limit=20`.
 public struct PaginationConfig: Codable, Sendable {
     public let pageSize: Int?
     public let limitParam: String?
-    public let offsetParam: String?
     public let pageParam: String?
     public let type: String?
 
     public init(
         pageSize: Int? = nil,
         limitParam: String? = nil,
-        offsetParam: String? = nil,
         pageParam: String? = nil,
         type: String? = nil
     ) {
         self.pageSize = pageSize
         self.limitParam = limitParam
-        self.offsetParam = offsetParam
         self.pageParam = pageParam
         self.type = type
     }

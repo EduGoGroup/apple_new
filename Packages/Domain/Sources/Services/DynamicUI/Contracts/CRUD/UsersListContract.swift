@@ -24,7 +24,7 @@ public struct UsersListContract: ScreenContract {
 
     public func dataConfig() -> DataConfig? {
         DataConfig(
-            pagination: PaginationConfig(pageSize: 20, limitParam: "limit", offsetParam: "offset"),
+            pagination: PaginationConfig(pageSize: 20, limitParam: "limit", pageParam: "page"),
             fieldMapping: ["full_name": "title", "email": "subtitle", "is_active": "status"],
             defaultValues: ["file_type_icon": "person"]
         )

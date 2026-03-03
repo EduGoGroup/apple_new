@@ -61,6 +61,6 @@ struct ScreenEventTests {
         #expect(ctx.selectedItem == nil)
         #expect(ctx.fieldValues.isEmpty)
         #expect(ctx.searchQuery == nil)
-        #expect(ctx.paginationOffset == 0)
+        #expect(ctx.paginationPage == 1)
     }
 }

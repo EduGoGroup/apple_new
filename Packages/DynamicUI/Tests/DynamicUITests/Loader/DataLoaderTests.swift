@@ -118,7 +118,7 @@ struct DataLoaderTests {
             "pagination": {
                 "pageSize": 25,
                 "limitParam": "limit",
-                "offsetParam": "offset"
+                "pageParam": "page"
             }
         }
         """.data(using: .utf8)!)
@@ -127,11 +127,11 @@ struct DataLoaderTests {
 
         let request = await mock.lastRequest
         #expect(request?.queryParameters["limit"] == "25")
-        #expect(request?.queryParameters["offset"] == "0")
+        #expect(request?.queryParameters["page"] == "1")
     }
 
-    @Test("loadNextPage uses correct offset")
-    func loadNextPageOffset() async throws {
+    @Test("loadNextPage uses correct page number")
+    func loadNextPageNumber() async throws {
         let mock = await makeMockWithResponse()
         let loader = makeLoader(mock: mock)
 
@@ -140,7 +140,7 @@ struct DataLoaderTests {
             "pagination": {
                 "pageSize": 10,
                 "limitParam": "limit",
-                "offsetParam": "offset"
+                "pageParam": "page"
             }
         }
         """.data(using: .utf8)!)
@@ -148,12 +148,12 @@ struct DataLoaderTests {
         _ = try await loader.loadNextPage(
             endpoint: "/api/v1/items",
             config: config,
-            currentOffset: 30
+            page: 4
         )
 
         let request = await mock.lastRequest
         #expect(request?.queryParameters["limit"] == "10")
-        #expect(request?.queryParameters["offset"] == "30")
+        #expect(request?.queryParameters["page"] == "4")
     }
 
     @Test("loadData with nil config makes plain request")
@@ -434,7 +434,7 @@ struct DataLoaderTests {
             "pagination": {
                 "pageSize": 10,
                 "limitParam": "limit",
-                "offsetParam": "offset"
+                "pageParam": "page"
             }
         }
         """.data(using: .utf8)!)
@@ -442,13 +442,13 @@ struct DataLoaderTests {
         let result = try await loader.loadNextPageWithMetadata(
             endpoint: "/api/v1/items",
             config: config,
-            currentOffset: 20
+            page: 3
         )
 
         #expect(result.items.count == 2)
         #expect(result.totalCount == 50)
         #expect(result.hasNextPage == true)
-        #expect(result.currentOffset == 20)
+        #expect(result.currentPage == 3)
     }
 
     @Test("loadNextPageWithMetadata infers hasNextPage from item count when server does not provide it")
@@ -468,7 +468,7 @@ struct DataLoaderTests {
             "pagination": {
                 "pageSize": 10,
                 "limitParam": "limit",
-                "offsetParam": "offset"
+                "pageParam": "page"
             }
         }
         """.data(using: .utf8)!)
@@ -476,7 +476,7 @@ struct DataLoaderTests {
         let result = try await loader.loadNextPageWithMetadata(
             endpoint: "/api/v1/items",
             config: config,
-            currentOffset: 0
+            page: 1
         )
 
         #expect(result.items.count == 10)
