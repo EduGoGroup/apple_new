@@ -193,6 +193,11 @@ extension LoginViewModel {
     public var errorMessage: String? {
         guard let error = error else { return nil }
 
+        // Verificar si es un error de rate limiting (429)
+        if let rateLimitedMessage = extractRateLimitedMessage(from: error) {
+            return rateLimitedMessage
+        }
+
         // Personalizar mensajes según tipo de error
         if let validationError = error as? ValidationError {
             return validationError.localizedDescription
@@ -205,6 +210,9 @@ extension LoginViewModel {
             case .validationError(let message, _):
                 return message
             case .executionError(let message, _):
+                if let rateLimited = extractRateLimitedMessage(fromDescription: message) {
+                    return rateLimited
+                }
                 // Probablemente credenciales incorrectas
                 if message.contains("credentials") || message.contains("authentication") {
                     return "Email o contraseña incorrectos"
@@ -216,10 +224,49 @@ extension LoginViewModel {
         }
 
         if let useCaseError = error as? UseCaseError {
-            return useCaseError.localizedDescription
+            switch useCaseError {
+            case .unauthorized:
+                return "Email o contraseña incorrectos."
+            case .executionFailed(let reason):
+                if let rateLimited = extractRateLimitedMessage(fromDescription: reason) {
+                    return rateLimited
+                }
+                return reason
+            default:
+                return useCaseError.localizedDescription
+            }
         }
 
         return error.localizedDescription
+    }
+
+    /// Extrae un mensaje de rate limiting del error si es aplicable.
+    private func extractRateLimitedMessage(from error: Error) -> String? {
+        let description = error.localizedDescription
+        return extractRateLimitedMessage(fromDescription: description)
+    }
+
+    /// Extrae un mensaje de rate limiting de una descripción de error.
+    private func extractRateLimitedMessage(fromDescription description: String) -> String? {
+        guard description.contains("Demasiadas solicitudes") ||
+              description.contains("rate") ||
+              description.contains("Rate") ||
+              description.contains("429") ||
+              description.contains("rateLimited") else {
+            return nil
+        }
+
+        // Intentar extraer el tiempo de retryAfter de la descripción
+        // NetworkError.rateLimited produce: "Demasiadas solicitudes. Intente de nuevo en X segundos"
+        if let range = description.range(of: "en \\d+ segundos", options: .regularExpression) {
+            let match = description[range]
+            if let seconds = Int(match.filter(\.isNumber)) {
+                let minutes = max(1, seconds / 60)
+                return "Demasiados intentos fallidos. Intenta de nuevo en \(minutes) minutos."
+            }
+        }
+
+        return "Demasiados intentos fallidos. Intenta de nuevo en 15 minutos."
     }
 
     /// Indica si se debe mostrar el botón de login deshabilitado
