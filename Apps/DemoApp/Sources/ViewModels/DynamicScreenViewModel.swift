@@ -28,7 +28,7 @@ final class DynamicScreenViewModel {
     var onLogout: (() -> Void)?
     var onNavigate: ((String, [String: String]) -> Void)?
     var onSubmit: ((String, String, [String: JSONValue]) async -> Void)?
-    private var currentOffset: Int = 0
+    private var currentPage: Int = 1
     private var prefetchCoordinator: PrefetchCoordinator?
 
     // MARK: - Optimistic UI
@@ -101,7 +101,7 @@ final class DynamicScreenViewModel {
     func loadData(screen: ScreenDefinition) async {
         guard let endpoint = screen.dataEndpoint else { return }
         dataState = .loading
-        currentOffset = 0
+        currentPage = 1
         do {
             let raw = try await dataLoader.loadData(
                 endpoint: endpoint,
@@ -127,7 +127,7 @@ final class DynamicScreenViewModel {
 
         dataState = .success(items: items, hasMore: hasMore, loadingMore: true)
         let pageSize = screen.dataConfig?.pagination?.pageSize ?? 20
-        currentOffset += pageSize
+        currentPage += 1
 
         do {
             // Try to consume prefetched data first
@@ -141,7 +141,7 @@ final class DynamicScreenViewModel {
             let result = try await dataLoader.loadNextPageWithMetadata(
                 endpoint: endpoint,
                 config: screen.dataConfig,
-                currentOffset: currentOffset
+                page: currentPage
             )
             dataState = .success(
                 items: items + result.items,
@@ -177,13 +177,12 @@ final class DynamicScreenViewModel {
         guard case .ready(let screen) = screenState,
               let endpoint = screen.dataEndpoint else { return [] }
 
-        let pageSize = screen.dataConfig?.pagination?.pageSize ?? 20
-        let nextOffset = currentOffset + pageSize
+        let nextPage = currentPage + 1
 
         let result = try await dataLoader.loadNextPageWithMetadata(
             endpoint: endpoint,
             config: screen.dataConfig,
-            currentOffset: nextOffset
+            page: nextPage
         )
         return result.items
     }
@@ -193,13 +192,17 @@ final class DynamicScreenViewModel {
     func executeEvent(_ event: ScreenEvent, selectedItem: [String: JSONValue]? = nil) async {
         guard case .ready(let screen) = screenState else { return }
 
+        // For loadMore, request the next page but don't increment currentPage yet —
+        // we only advance it after a successful response to avoid skipping pages on failure.
+        let paginationPage = event == .loadMore ? currentPage + 1 : currentPage
+
         let context = EventContext(
             screenKey: screen.screenKey,
             userContext: userContext,
             selectedItem: selectedItem,
             fieldValues: fieldValues,
             searchQuery: searchQuery,
-            paginationOffset: currentOffset
+            paginationPage: paginationPage
         )
 
         guard let orchestrator else {
@@ -209,6 +212,12 @@ final class DynamicScreenViewModel {
         }
 
         let result = await orchestrator.execute(event: event, context: context)
+
+        // Advance the page tracker only after a successful loadMore response.
+        if event == .loadMore, case .success = result {
+            currentPage = paginationPage
+        }
+
         handleResult(result)
     }
 

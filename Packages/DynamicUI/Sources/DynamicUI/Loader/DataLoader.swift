@@ -21,18 +21,18 @@ public struct PaginatedResult: Sendable {
     public let items: [[String: EduModels.JSONValue]]
     public let totalCount: Int?
     public let hasNextPage: Bool
-    public let currentOffset: Int
+    public let currentPage: Int
 
     public init(
         items: [[String: EduModels.JSONValue]],
         totalCount: Int?,
         hasNextPage: Bool,
-        currentOffset: Int
+        currentPage: Int
     ) {
         self.items = items
         self.totalCount = totalCount
         self.hasNextPage = hasNextPage
-        self.currentOffset = currentOffset
+        self.currentPage = currentPage
     }
 }
 
@@ -125,7 +125,7 @@ public actor DataLoader {
         // Online: intentar fetch
         logger?.debug("[EduGo.Cache.Data] REMOTE: \(cacheKey, privacy: .public)")
         do {
-            var request = buildRequest(endpoint: endpoint, config: config, offset: 0)
+            var request = buildRequest(endpoint: endpoint, config: config, page: 1)
             if let params {
                 request = request.queryParams(params)
             }
@@ -145,13 +145,13 @@ public actor DataLoader {
         }
     }
 
-    /// Carga la siguiente pagina de datos (offset-based).
+    /// Carga la siguiente pagina de datos (page-based).
     public func loadNextPage(
         endpoint: String,
         config: DataConfig?,
-        currentOffset: Int
+        page: Int
     ) async throws -> [String: EduModels.JSONValue] {
-        let request = buildRequest(endpoint: endpoint, config: config, offset: currentOffset)
+        let request = buildRequest(endpoint: endpoint, config: config, page: page)
         return try await fetchAndNormalize(request)
     }
 
@@ -159,9 +159,9 @@ public actor DataLoader {
     public func loadNextPageWithMetadata(
         endpoint: String,
         config: DataConfig?,
-        currentOffset: Int
+        page: Int
     ) async throws -> PaginatedResult {
-        let raw = try await loadNextPage(endpoint: endpoint, config: config, currentOffset: currentOffset)
+        let raw = try await loadNextPage(endpoint: endpoint, config: config, page: page)
         let items = extractItemsFromResponse(from: raw)
         let pageSize = config?.pagination?.pageSize ?? 20
 
@@ -173,7 +173,7 @@ public actor DataLoader {
             items: items,
             totalCount: totalCount,
             hasNextPage: hasNextPage,
-            currentOffset: currentOffset
+            currentPage: page
         )
     }
 
@@ -267,7 +267,7 @@ public actor DataLoader {
         return key
     }
 
-    private func buildRequest(endpoint: String, config: DataConfig?, offset: Int) -> HTTPRequest {
+    private func buildRequest(endpoint: String, config: DataConfig?, page: Int) -> HTTPRequest {
         let (baseURL, path) = resolveEndpoint(endpoint)
         var request = HTTPRequest.get(baseURL + path)
 
@@ -277,11 +277,11 @@ public actor DataLoader {
 
         if let pagination = config?.pagination {
             let limitKey = pagination.limitParam ?? "limit"
-            let offsetKey = pagination.offsetParam ?? pagination.pageParam ?? "offset"
+            let pageKey = pagination.pageParam ?? "page"
             let size = pagination.pageSize ?? 20
             request = request
                 .queryParam(limitKey, String(size))
-                .queryParam(offsetKey, String(offset))
+                .queryParam(pageKey, String(page))
         }
 
         return request

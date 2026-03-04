@@ -112,7 +112,7 @@ public actor EventOrchestrator {
                 data = try await dataLoader.loadNextPage(
                     endpoint: endpoint,
                     config: config,
-                    currentOffset: context.paginationOffset
+                    page: context.paginationPage
                 )
             } else {
                 data = try await dataLoader.loadData(
