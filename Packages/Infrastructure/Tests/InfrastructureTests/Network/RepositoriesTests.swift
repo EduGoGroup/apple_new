@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import EduNetwork
+import EduCore
 
 // MARK: - Test Fixtures
 
@@ -12,8 +13,8 @@ enum TestFixtures {
     static let validUserId = "550e8400-e29b-41d4-a716-446655440099"
     static let invalidId = "not-a-uuid"
 
-    static func createMaterialDTO() -> MaterialDTO {
-        MaterialDTO(
+    static func createMaterialDTO() -> EduNetwork.MaterialDTO {
+        EduNetwork.MaterialDTO(
             id: validMaterialId,
             title: "Test Material",
             description: "Test Description",
@@ -499,5 +500,244 @@ struct StatsRepositoryTests {
         await #expect(throws: StatsRepositoryError.forbidden) {
             _ = try await repository.getGlobalStats()
         }
+    }
+}
+
+// MARK: - AuditRepository Tests
+
+@Suite("AuditRepository Tests")
+struct AuditRepositoryTests {
+
+    let auditBaseURL = "https://iam.edugo.com"
+    let eventId = "550e8400-e29b-41d4-a716-446655440099"
+
+    func makeEvent(id: String? = nil) -> EduCore.AuditEventDTO {
+        EduCore.AuditEventDTO(
+            id: id ?? eventId,
+            actorEmail: "admin@edugo.com",
+            actorRole: "superadmin",
+            action: "CREATE",
+            resourceType: "user",
+            resourceId: "res-001",
+            severity: "medium",
+            category: "user_management",
+            createdAt: "2026-03-04T10:30:00Z"
+        )
+    }
+
+    func makeSummary() -> EduCore.AuditSummaryDTO {
+        EduCore.AuditSummaryDTO(total: 50, bySeverity: ["critical": 5, "high": 10, "medium": 20, "low": 15])
+    }
+
+    // MARK: - listEvents
+
+    @Test("listEvents builds correct URL with page and page_size")
+    func testListEventsURLFormat() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+        let page = PaginatedResponse(items: [makeEvent()], totalCount: 1, page: 1, pageSize: 20)
+        await mock.setResponse(page)
+
+        _ = try await repository.listEvents(page: 1, pageSize: 20, severity: nil)
+
+        let wasRequested = await mock.wasRequestedWith(url: "/api/v1/audit/events")
+        let hasPageParam = await mock.wasRequestedWith(url: "page=1")
+        let hasPageSizeParam = await mock.wasRequestedWith(url: "page_size=20")
+        #expect(wasRequested)
+        #expect(hasPageParam)
+        #expect(hasPageSizeParam)
+    }
+
+    @Test("listEvents appends severity query param when provided")
+    func testListEventsWithSeverityFilter() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+        let page = PaginatedResponse(items: [makeEvent()], totalCount: 1, page: 1, pageSize: 20)
+        await mock.setResponse(page)
+
+        _ = try await repository.listEvents(page: 1, pageSize: 20, severity: "critical")
+
+        let hasSeverityParam = await mock.wasRequestedWith(url: "severity=critical")
+        #expect(hasSeverityParam)
+    }
+
+    @Test("listEvents percent-encodes severity with special characters")
+    func testListEventsSeverityEncoding() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+        let page = PaginatedResponse(items: [EduCore.AuditEventDTO](), totalCount: 0, page: 1, pageSize: 20)
+        await mock.setResponse(page)
+
+        _ = try await repository.listEvents(page: 1, pageSize: 20, severity: "high level")
+
+        let hasEncodedSeverity = await mock.wasRequestedWith(url: "severity=high%20level")
+        #expect(hasEncodedSeverity)
+    }
+
+    @Test("listEvents omits severity param when nil")
+    func testListEventsNoSeverityParam() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+        let page = PaginatedResponse(items: [EduCore.AuditEventDTO](), totalCount: 0, page: 1, pageSize: 20)
+        await mock.setResponse(page)
+
+        _ = try await repository.listEvents(page: 1, pageSize: 20, severity: nil)
+
+        let hasSeverityParam = await mock.wasRequestedWith(url: "severity=")
+        #expect(!hasSeverityParam)
+    }
+
+    @Test("listEvents throws unauthorized on 401")
+    func testListEventsUnauthorized() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+
+        await mock.setError(.unauthorized)
+
+        await #expect(throws: AuditRepositoryError.unauthorized) {
+            _ = try await repository.listEvents(page: 1, pageSize: 20, severity: nil)
+        }
+    }
+
+    @Test("listEvents throws forbidden on 403")
+    func testListEventsForbidden() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+
+        await mock.setError(.forbidden)
+
+        await #expect(throws: AuditRepositoryError.forbidden) {
+            _ = try await repository.listEvents(page: 1, pageSize: 20, severity: nil)
+        }
+    }
+
+    // MARK: - getEvent
+
+    @Test("getEvent builds correct URL with event ID")
+    func testGetEventURL() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+        await mock.setResponse(makeEvent())
+
+        _ = try await repository.getEvent(id: eventId)
+
+        let wasRequested = await mock.wasRequestedWith(url: "/api/v1/audit/events/\(eventId)")
+        #expect(wasRequested)
+    }
+
+    @Test("getEvent returns event DTO on success")
+    func testGetEventSuccess() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+        await mock.setResponse(makeEvent(id: eventId))
+
+        let result = try await repository.getEvent(id: eventId)
+
+        #expect(result.id == eventId)
+        #expect(result.actorEmail == "admin@edugo.com")
+    }
+
+    @Test("getEvent throws eventNotFound on 404")
+    func testGetEventNotFound() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+
+        await mock.setError(.notFound)
+
+        await #expect(throws: AuditRepositoryError.eventNotFound(eventId)) {
+            _ = try await repository.getEvent(id: eventId)
+        }
+    }
+
+    @Test("getEvent throws unauthorized on 401")
+    func testGetEventUnauthorized() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+
+        await mock.setError(.unauthorized)
+
+        await #expect(throws: AuditRepositoryError.unauthorized) {
+            _ = try await repository.getEvent(id: eventId)
+        }
+    }
+
+    @Test("getEvent throws forbidden on 403")
+    func testGetEventForbidden() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+
+        await mock.setError(.forbidden)
+
+        await #expect(throws: AuditRepositoryError.forbidden) {
+            _ = try await repository.getEvent(id: eventId)
+        }
+    }
+
+    // MARK: - getSummary
+
+    @Test("getSummary builds correct URL")
+    func testGetSummaryURL() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+        await mock.setResponse(makeSummary())
+
+        _ = try await repository.getSummary()
+
+        let wasRequested = await mock.wasRequestedWith(url: "/api/v1/audit/summary")
+        #expect(wasRequested)
+    }
+
+    @Test("getSummary returns summary DTO on success")
+    func testGetSummarySuccess() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+        await mock.setResponse(makeSummary())
+
+        let result = try await repository.getSummary()
+
+        #expect(result.total == 50)
+        #expect(result.bySeverity["critical"] == 5)
+        #expect(result.bySeverity["medium"] == 20)
+    }
+
+    @Test("getSummary throws unauthorized on 401")
+    func testGetSummaryUnauthorized() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+
+        await mock.setError(.unauthorized)
+
+        await #expect(throws: AuditRepositoryError.unauthorized) {
+            _ = try await repository.getSummary()
+        }
+    }
+
+    @Test("getSummary throws forbidden on 403")
+    func testGetSummaryForbidden() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: auditBaseURL)
+
+        await mock.setError(.forbidden)
+
+        await #expect(throws: AuditRepositoryError.forbidden) {
+            _ = try await repository.getSummary()
+        }
+    }
+
+    // MARK: - baseURL sanitization
+
+    @Test("AuditRepository strips trailing slashes from baseURL")
+    func testBaseURLSanitization() async throws {
+        let mock = MockNetworkClient()
+        let repository = AuditRepository(client: mock, baseURL: "https://iam.edugo.com///")
+        let page = PaginatedResponse(items: [EduCore.AuditEventDTO](), totalCount: 0, page: 1, pageSize: 20)
+        await mock.setResponse(page)
+
+        _ = try await repository.listEvents(page: 1, pageSize: 20, severity: nil)
+
+        let hasDoubleSlash = await mock.wasRequestedWith(url: "com///api")
+        #expect(!hasDoubleSlash)
+        let wasRequested = await mock.wasRequestedWith(url: "com/api/v1/audit/events")
+        #expect(wasRequested)
     }
 }

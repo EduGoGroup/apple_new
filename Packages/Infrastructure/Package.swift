@@ -57,7 +57,10 @@ let package = Package(
         // Tests
         .testTarget(
             name: "EduInfrastructureTests",
-            dependencies: ["EduInfrastructure"],
+            dependencies: [
+                "EduInfrastructure",
+                .product(name: "EduCore", package: "Core")
+            ],
             path: "Tests/InfrastructureTests"
         )
     ]
