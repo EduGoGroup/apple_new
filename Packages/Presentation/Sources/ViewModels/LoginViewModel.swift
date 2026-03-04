@@ -261,7 +261,7 @@ extension LoginViewModel {
         if let range = description.range(of: "en \\d+ segundos", options: .regularExpression) {
             let match = description[range]
             if let seconds = Int(match.filter(\.isNumber)) {
-                let minutes = max(1, seconds / 60)
+                let minutes = max(1, (seconds + 59) / 60)
                 return "Demasiados intentos fallidos. Intenta de nuevo en \(minutes) minutos."
             }
         }
