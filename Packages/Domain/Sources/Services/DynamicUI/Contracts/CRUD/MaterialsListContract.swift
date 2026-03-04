@@ -24,7 +24,7 @@ public struct MaterialsListContract: ScreenContract {
 
     public func dataConfig() -> DataConfig? {
         DataConfig(
-            pagination: PaginationConfig(pageSize: 20, limitParam: "limit", offsetParam: "offset"),
+            pagination: PaginationConfig(pageSize: 20, limitParam: "limit", pageParam: "page"),
             fieldMapping: ["title": "title", "description": "subtitle", "file_type": "file_type_icon"],
             defaultValues: ["file_type_icon": "description"]
         )
