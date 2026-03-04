@@ -192,13 +192,17 @@ final class DynamicScreenViewModel {
     func executeEvent(_ event: ScreenEvent, selectedItem: [String: JSONValue]? = nil) async {
         guard case .ready(let screen) = screenState else { return }
 
+        // For loadMore, request the next page but don't increment currentPage yet —
+        // we only advance it after a successful response to avoid skipping pages on failure.
+        let paginationPage = event == .loadMore ? currentPage + 1 : currentPage
+
         let context = EventContext(
             screenKey: screen.screenKey,
             userContext: userContext,
             selectedItem: selectedItem,
             fieldValues: fieldValues,
             searchQuery: searchQuery,
-            paginationPage: currentPage
+            paginationPage: paginationPage
         )
 
         guard let orchestrator else {
@@ -208,6 +212,12 @@ final class DynamicScreenViewModel {
         }
 
         let result = await orchestrator.execute(event: event, context: context)
+
+        // Advance the page tracker only after a successful loadMore response.
+        if event == .loadMore, case .success = result {
+            currentPage = paginationPage
+        }
+
         handleResult(result)
     }
 

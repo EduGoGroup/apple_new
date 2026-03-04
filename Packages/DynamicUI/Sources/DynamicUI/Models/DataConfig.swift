@@ -27,7 +27,7 @@ public struct DataConfig: Codable, Sendable {
 
 /// Configuración de paginación page-based.
 ///
-/// El backend devuelve `{"items_key": [...], "total": N, "page": N, "limit": N}`.
+/// El backend devuelve `{"items": [...], "total": N, "page": N, "limit": N}`.
 /// Query params: `?page=1&limit=20`.
 public struct PaginationConfig: Codable, Sendable {
     public let pageSize: Int?
