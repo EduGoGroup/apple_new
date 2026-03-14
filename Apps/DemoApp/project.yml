@@ -1,0 +1,55 @@
+name: DemoApp
+options:
+  bundleIdPrefix: com.edugo
+  deploymentTarget:
+    iOS: "26.0"
+    macOS: "26.0"
+  xcodeVersion: "26.0"
+  generateEmptyDirectories: true
+  createIntermediateGroups: true
+
+packages:
+  EduGoModules:
+    path: ../..
+
+targets:
+  DemoApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.edugo.demoapp
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        INFOPLIST_GENERATION_MODE: GeneratedByXcode
+        GENERATE_INFOPLIST_FILE: true
+        SWIFT_STRICT_CONCURRENCY: complete
+    dependencies:
+      - package: EduGoModules
+        product: EduGoModules
+
+  DemoApp-macOS:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.edugo.demoapp
+        PRODUCT_NAME: DemoApp
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        INFOPLIST_GENERATION_MODE: GeneratedByXcode
+        GENERATE_INFOPLIST_FILE: true
+        SWIFT_STRICT_CONCURRENCY: complete
+    dependencies:
+      - package: EduGoModules
+        product: EduGoModules

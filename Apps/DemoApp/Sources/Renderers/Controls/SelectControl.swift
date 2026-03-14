@@ -60,7 +60,7 @@ struct CheckboxControl: View {
 
     var body: some View {
         Toggle(slot.label ?? "", isOn: isOn)
-            .toggleStyle(.checkbox)
+            .toggleStyle(.button)
             .disabled(slot.readOnly ?? false)
     }
 }
