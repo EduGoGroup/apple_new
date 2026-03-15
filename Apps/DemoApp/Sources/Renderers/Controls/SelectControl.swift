@@ -60,7 +60,11 @@ struct CheckboxControl: View {
 
     var body: some View {
         Toggle(slot.label ?? "", isOn: isOn)
+            #if os(macOS)
             .toggleStyle(.checkbox)
+            #else
+            .toggleStyle(.switch)
+            #endif
             .disabled(slot.readOnly ?? false)
     }
 }

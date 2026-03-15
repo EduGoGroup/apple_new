@@ -331,6 +331,67 @@ struct ScreenLoaderSeedTests {
         #expect(requestCount == 1)
     }
 
+    // MARK: - Seed Dedup Tests
+
+    @Test("seedFromBundle twice with same version does not re-seed")
+    func seedDedupSameVersion() async throws {
+        let mock = MockNetworkClient()
+        let loader = ScreenLoader(networkClient: mock, baseURL: "https://api.test.com")
+
+        let dto = Self.makeBundleDTO(version: "1.0.0")
+        await loader.seedFromBundle(screens: ["dash": dto])
+
+        let countAfterFirst = await loader.cacheCount
+        #expect(countAfterFirst == 1)
+
+        // Seed again with the same version — should be a no-op
+        await loader.seedFromBundle(screens: ["dash": dto])
+
+        let countAfterSecond = await loader.cacheCount
+        #expect(countAfterSecond == 1)
+
+        // Verify the screen is still correctly served
+        let screen = try await loader.loadScreen(key: "dash")
+        #expect(screen.screenKey == "dashboard_main")
+
+        // No network requests should have been made
+        let requestCount = await mock.requestCount
+        #expect(requestCount == 0)
+    }
+
+    @Test("seedFromBundle with updated version re-seeds the entry")
+    func seedUpdatesOnNewVersion() async throws {
+        let mock = MockNetworkClient()
+        let loader = ScreenLoader(networkClient: mock, baseURL: "https://api.test.com")
+
+        let v1 = Self.makeBundleDTO(
+            screenKey: "my_screen",
+            screenName: "V1 Screen",
+            version: "1.0.0"
+        )
+        await loader.seedFromBundle(screens: ["my_screen": v1])
+
+        let screenV1 = try await loader.loadScreen(key: "my_screen")
+        #expect(screenV1.screenName == "V1 Screen")
+        #expect(screenV1.version == 1)
+
+        // Seed with a new version — should replace the cache entry
+        let v2 = Self.makeBundleDTO(
+            screenKey: "my_screen",
+            screenName: "V2 Screen",
+            version: "2.0.0"
+        )
+        await loader.seedFromBundle(screens: ["my_screen": v2])
+
+        let screenV2 = try await loader.loadScreen(key: "my_screen")
+        #expect(screenV2.screenName == "V2 Screen")
+        #expect(screenV2.version == 2)
+
+        // Still only 1 entry in cache
+        let count = await loader.cacheCount
+        #expect(count == 1)
+    }
+
     // MARK: - clearCache clears bundle versions too
 
     @Test("clearCache also clears bundle versions")

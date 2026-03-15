@@ -72,3 +72,4 @@ playground.xcworkspace
 # Provisioning profiles
 *.mobileprovision
 *.provisionprofile
+.obsidian/

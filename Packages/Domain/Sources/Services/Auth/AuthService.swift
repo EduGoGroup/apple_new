@@ -164,6 +164,10 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
     /// On first call, migrates any existing tokens from UserDefaults to Keychain
     /// and removes the UserDefaults entries.
     ///
+    /// After restoring locally, verifies the token against the server in background.
+    /// If the server reports the token as invalid/revoked, the session is cleared.
+    /// Network errors are ignored (offline-first).
+    ///
     /// - Returns: `true` si se restauró un token válido (no expirado).
     @discardableResult
     public func restoreSession() async -> Bool {
@@ -185,8 +189,55 @@ public actor AuthService: TokenProvider, SessionExpiredHandler {
             currentContext = context
         }
 
+        // Verify token against server in background (offline-first: network errors ignored)
+        let tokenToVerify = token.accessToken
+        Task { [weak self] in
+            await self?.verifyTokenInBackground(tokenToVerify)
+        }
+
         return true
     }
+
+    /// Verifies token validity against the server in background.
+    /// If server reports token as invalid/revoked and it hasn't been refreshed since,
+    /// clears the session. Auth errors (401/403) also clear the session.
+    /// Only genuine connectivity/timeout errors are ignored (offline-first).
+    private func verifyTokenInBackground(_ tokenToVerify: String) async {
+        do {
+            let url = "\(apiConfig.iamBaseURL)/api/v1/auth/verify"
+            let response: TokenVerificationResponseDTO = try await networkClient.post(
+                url,
+                body: EmptyBody(),
+                headers: ["Authorization": "Bearer \(tokenToVerify)"]
+            )
+
+            if !response.valid {
+                // Only clear if the token hasn't been refreshed in the meantime
+                if currentToken?.accessToken == tokenToVerify {
+                    await onSessionExpired()
+                }
+            }
+        } catch let error as NetworkError {
+            switch error {
+            case .unauthorized, .forbidden:
+                // Server rejected the token — clear session if it hasn't been refreshed
+                if currentToken?.accessToken == tokenToVerify {
+                    await onSessionExpired()
+                }
+            case .networkFailure, .timeout, .cancelled:
+                // Connectivity issue → keep session (offline-first)
+                break
+            default:
+                // Other errors (decoding, etc.) → keep session to avoid false logouts
+                break
+            }
+        } catch {
+            // Unknown error type → keep session (offline-first)
+        }
+    }
+
+    /// Empty body for requests that send credentials via headers only.
+    private struct EmptyBody: Encodable, Sendable {}
 
     // MARK: - Context Switching
 
