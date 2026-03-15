@@ -10,6 +10,9 @@ public actor ScreenLoader {
     private var memoryCache: [String: CachedScreen] = [:]
     private var etagCache: [String: String] = [:]
     private var bundleVersions: [String: String] = [:]
+    /// Keys currently being seeded — prevents concurrent `seedFromBundle` calls
+    /// from re-serializing the same screens due to actor reentrancy.
+    private var seedingInProgress: Set<String> = []
     private let maxCacheSize: Int
     private let defaultTTL: TimeInterval
     private let logger: os.Logger?
@@ -52,12 +55,19 @@ public actor ScreenLoader {
     /// Screen serialization/deserialization runs in parallel via `withTaskGroup`
     /// for improved performance with large bundles.
     public func seedFromBundle(screens: [String: ScreenBundleDTO]) async {
-        // Skip screens already in cache with the same version (avoids redundant work on double seed)
+        // Skip screens already in cache with the same version OR currently being seeded
+        // by a concurrent call (actor reentrancy guard).
         let screensToSeed = screens.filter { key, bundleDTO in
+            guard !seedingInProgress.contains(key) else { return false }
             guard let cached = memoryCache[key] else { return true }
             return cached.bundleVersion != bundleDTO.version
         }
         guard !screensToSeed.isEmpty else { return }
+
+        // Mark keys as seeding before the first await to prevent concurrent duplicates
+        for key in screensToSeed.keys {
+            seedingInProgress.insert(key)
+        }
 
         // Capture defaultTTL for use in child tasks (value type, safe to capture)
         let capturedDefaultTTL = defaultTTL
@@ -125,6 +135,11 @@ public actor ScreenLoader {
                 bundleVersion: version
             )
             bundleVersions[key] = version
+        }
+
+        // Clear seeding-in-progress markers
+        for key in screensToSeed.keys {
+            seedingInProgress.remove(key)
         }
     }
 
