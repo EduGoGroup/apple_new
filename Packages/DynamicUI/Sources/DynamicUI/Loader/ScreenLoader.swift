@@ -52,13 +52,20 @@ public actor ScreenLoader {
     /// Screen serialization/deserialization runs in parallel via `withTaskGroup`
     /// for improved performance with large bundles.
     public func seedFromBundle(screens: [String: ScreenBundleDTO]) async {
+        // Skip screens already in cache with the same version (avoids redundant work on double seed)
+        let screensToSeed = screens.filter { key, bundleDTO in
+            guard let cached = memoryCache[key] else { return true }
+            return cached.bundleVersion != bundleDTO.version
+        }
+        guard !screensToSeed.isEmpty else { return }
+
         // Capture defaultTTL for use in child tasks (value type, safe to capture)
         let capturedDefaultTTL = defaultTTL
 
         let results = await withTaskGroup(
             of: (String, ScreenDefinition, String, TimeInterval)?.self
         ) { group in
-            for (key, bundleDTO) in screens {
+            for (key, bundleDTO) in screensToSeed {
                 group.addTask {
                     let pattern = ScreenPattern(rawValue: bundleDTO.pattern)
 
