@@ -55,18 +55,37 @@ public actor ScreenLoader {
     /// Screen serialization/deserialization runs in parallel via `withTaskGroup`
     /// for improved performance with large bundles.
     public func seedFromBundle(screens: [String: ScreenBundleDTO]) async {
+        // Normalize: use bundleDTO.screenKey as the canonical cache key to avoid
+        // mismatches between the dictionary key and the underlying ScreenDefinition.screenKey.
+        // If they differ, log a warning and use the screenKey from the DTO.
+        var normalizedScreens: [String: ScreenBundleDTO] = [:]
+        for (key, bundleDTO) in screens {
+            let canonicalKey = bundleDTO.screenKey
+            if key != canonicalKey {
+                logger?.warning("[EduGo.Cache.Screen] seedFromBundle: dictionary key '\(key, privacy: .public)' differs from screenKey '\(canonicalKey, privacy: .public)'; using screenKey as cache key")
+            }
+            normalizedScreens[canonicalKey] = bundleDTO
+        }
+
         // Skip screens already in cache with the same version OR currently being seeded
         // by a concurrent call (actor reentrancy guard).
-        let screensToSeed = screens.filter { key, bundleDTO in
+        let screensToSeed = normalizedScreens.filter { key, bundleDTO in
             guard !seedingInProgress.contains(key) else { return false }
             guard let cached = memoryCache[key] else { return true }
             return cached.bundleVersion != bundleDTO.version
         }
         guard !screensToSeed.isEmpty else { return }
 
-        // Mark keys as seeding before the first await to prevent concurrent duplicates
-        for key in screensToSeed.keys {
+        // Mark keys as seeding before the first await to prevent concurrent duplicates.
+        // Use defer to guarantee cleanup even if future refactors add early returns or throws.
+        let seedingKeys = Set(screensToSeed.keys)
+        for key in seedingKeys {
             seedingInProgress.insert(key)
+        }
+        defer {
+            for key in seedingKeys {
+                seedingInProgress.remove(key)
+            }
         }
 
         // Capture defaultTTL for use in child tasks (value type, safe to capture)
@@ -135,11 +154,6 @@ public actor ScreenLoader {
                 bundleVersion: version
             )
             bundleVersions[key] = version
-        }
-
-        // Clear seeding-in-progress markers
-        for key in screensToSeed.keys {
-            seedingInProgress.remove(key)
         }
     }
 

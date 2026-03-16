@@ -1,18 +1,5 @@
 import Foundation
 
-// MARK: - Token Verification Request DTO
-
-/// Request para verificar la validez de un token contra el servidor.
-///
-/// Usado en `POST /api/v1/auth/verify`.
-public struct TokenVerificationRequestDTO: Codable, Sendable, Equatable {
-    public let token: String
-
-    public init(token: String) {
-        self.token = token
-    }
-}
-
 // MARK: - Token Verification Response DTO
 
 /// Respuesta del servidor al verificar un token.
