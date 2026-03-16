@@ -10,6 +10,9 @@ public actor ScreenLoader {
     private var memoryCache: [String: CachedScreen] = [:]
     private var etagCache: [String: String] = [:]
     private var bundleVersions: [String: String] = [:]
+    /// Keys currently being seeded — prevents concurrent `seedFromBundle` calls
+    /// from re-serializing the same screens due to actor reentrancy.
+    private var seedingInProgress: Set<String> = []
     private let maxCacheSize: Int
     private let defaultTTL: TimeInterval
     private let logger: os.Logger?
@@ -52,13 +55,46 @@ public actor ScreenLoader {
     /// Screen serialization/deserialization runs in parallel via `withTaskGroup`
     /// for improved performance with large bundles.
     public func seedFromBundle(screens: [String: ScreenBundleDTO]) async {
+        // Normalize: use bundleDTO.screenKey as the canonical cache key to avoid
+        // mismatches between the dictionary key and the underlying ScreenDefinition.screenKey.
+        // If they differ, log a warning and use the screenKey from the DTO.
+        var normalizedScreens: [String: ScreenBundleDTO] = [:]
+        for (key, bundleDTO) in screens {
+            let canonicalKey = bundleDTO.screenKey
+            if key != canonicalKey {
+                logger?.warning("[EduGo.Cache.Screen] seedFromBundle: dictionary key '\(key, privacy: .public)' differs from screenKey '\(canonicalKey, privacy: .public)'; using screenKey as cache key")
+            }
+            normalizedScreens[canonicalKey] = bundleDTO
+        }
+
+        // Skip screens already in cache with the same version OR currently being seeded
+        // by a concurrent call (actor reentrancy guard).
+        let screensToSeed = normalizedScreens.filter { key, bundleDTO in
+            guard !seedingInProgress.contains(key) else { return false }
+            guard let cached = memoryCache[key] else { return true }
+            return cached.bundleVersion != bundleDTO.version
+        }
+        guard !screensToSeed.isEmpty else { return }
+
+        // Mark keys as seeding before the first await to prevent concurrent duplicates.
+        // Use defer to guarantee cleanup even if future refactors add early returns or throws.
+        let seedingKeys = Set(screensToSeed.keys)
+        for key in seedingKeys {
+            seedingInProgress.insert(key)
+        }
+        defer {
+            for key in seedingKeys {
+                seedingInProgress.remove(key)
+            }
+        }
+
         // Capture defaultTTL for use in child tasks (value type, safe to capture)
         let capturedDefaultTTL = defaultTTL
 
         let results = await withTaskGroup(
             of: (String, ScreenDefinition, String, TimeInterval)?.self
         ) { group in
-            for (key, bundleDTO) in screens {
+            for (key, bundleDTO) in screensToSeed {
                 group.addTask {
                     let pattern = ScreenPattern(rawValue: bundleDTO.pattern)
 
