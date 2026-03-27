@@ -1,7 +1,7 @@
 import Foundation
 import EduFoundation
 
-// MARK: - Assessment State Machine
+// MARK: - Assessment Flow State
 
 /// Estados del flujo de tomar una evaluación.
 ///
@@ -60,6 +60,33 @@ extension TakeAssessmentFlowError: LocalizedError {
             return "La evaluación no ha sido cargada"
         case .noAttemptInProgress:
             return "No hay un intento en progreso"
+        }
+    }
+}
+
+// MARK: - AssessmentState to FlowState Mapping
+
+extension TakeAssessmentFlowState {
+    /// Convierte un AssessmentState del state machine a TakeAssessmentFlowState.
+    ///
+    /// Mapea los estados ricos del AssessmentStateMachine a los estados simples
+    /// del flujo, colapsando los associated values.
+    static func from(_ assessmentState: AssessmentState) -> TakeAssessmentFlowState {
+        switch assessmentState {
+        case .idle:
+            return .idle
+        case .loading:
+            return .loading
+        case .ready:
+            return .ready
+        case .inProgress:
+            return .inProgress
+        case .submitting:
+            return .submitting
+        case .completed:
+            return .completed
+        case .error:
+            return .idle
         }
     }
 }
@@ -404,12 +431,17 @@ public protocol LocalStorageServiceProtocol: Sendable {
 
 /// Actor que maneja el flujo completo de tomar una evaluación con state machine.
 ///
+/// Utiliza internamente `AssessmentStateMachine` para gestionar las transiciones
+/// de estado con validación, persistencia y timeout automático. Expone el estado
+/// como `TakeAssessmentFlowState` para compatibilidad con la capa de presentación.
+///
 /// Implementa:
-/// - State machine con transiciones validadas
+/// - State machine con transiciones validadas via `AssessmentStateMachine`
 /// - Persistencia local de progreso (offline support)
 /// - Queue de submissions pendientes para sync
 /// - Validaciones de tiempo límite y completitud
 /// - Idempotency para prevenir duplicados
+/// - Stream de estados para UI reactiva
 ///
 /// ## Flujo de Uso
 /// ```swift
@@ -436,9 +468,13 @@ public actor TakeAssessmentUseCase {
     private let attemptsRepository: AttemptsRepositoryProtocol
     private let localStorage: LocalStorageServiceProtocol
 
+    // MARK: - State Machine
+
+    /// State machine que gestiona las transiciones de estado con validación y persistencia.
+    private var stateMachine: AssessmentStateMachine?
+
     // MARK: - State
 
-    private var currentState: TakeAssessmentFlowState = .idle
     private var currentAssessment: Assessment?
     private var currentAttempt: InProgressAttempt?
     private var currentInput: TakeAssessmentInput?
@@ -447,25 +483,41 @@ public actor TakeAssessmentUseCase {
     // MARK: - Configuration
 
     private let maxRetries = 3
+    private let persistence: any StatePersistence
 
     // MARK: - Initialization
 
+    /// Crea una nueva instancia del caso de uso.
+    ///
+    /// - Parameters:
+    ///   - assessmentsRepository: Repositorio de assessments
+    ///   - attemptsRepository: Repositorio de attempts
+    ///   - localStorage: Servicio de almacenamiento local
+    ///   - persistence: Proveedor de persistencia para el state machine (default: UserDefaults)
     public init(
         assessmentsRepository: AssessmentsRepositoryProtocol,
         attemptsRepository: AttemptsRepositoryProtocol,
-        localStorage: LocalStorageServiceProtocol
+        localStorage: LocalStorageServiceProtocol,
+        persistence: any StatePersistence = UserDefaultsStatePersistence()
     ) {
         self.assessmentsRepository = assessmentsRepository
         self.attemptsRepository = attemptsRepository
         self.localStorage = localStorage
+        self.persistence = persistence
     }
 
     // MARK: - Public API
 
-    /// Estado actual del flujo.
+    /// Estado actual del flujo, derivado del AssessmentStateMachine.
+    ///
+    /// Nota: Esta propiedad sincroniza con el state machine cacheando el ultimo
+    /// estado conocido para evitar await en la propiedad computed.
     public var state: TakeAssessmentFlowState {
-        currentState
+        cachedFlowState
     }
+
+    /// Estado cacheado del flow state, actualizado en cada transicion.
+    private var cachedFlowState: TakeAssessmentFlowState = .idle
 
     /// Assessment actualmente cargado.
     public var assessment: Assessment? {
@@ -477,18 +529,57 @@ public actor TakeAssessmentUseCase {
         currentAttempt
     }
 
+    /// Stream de estados para UI reactiva.
+    ///
+    /// Permite a la capa de presentación observar cambios de estado
+    /// sin polling.
+    public var assessmentStateStream: StateStream<AssessmentState>? {
+        get async {
+            await stateMachine?.stateStream
+        }
+    }
+
     /// Carga un assessment desde el servidor o cache.
     ///
     /// - Parameter input: Input con assessmentId y userId
     /// - Returns: Assessment cargado
     /// - Throws: Error si la carga falla y no hay cache
     public func loadAssessment(input: TakeAssessmentInput) async throws -> Assessment {
-        guard currentState == .idle || currentState == .ready else {
-            throw TakeAssessmentFlowError.invalidTransition(from: currentState, to: .loading)
+        let currentFlowState = state
+        guard currentFlowState == .idle || currentFlowState == .ready else {
+            throw TakeAssessmentFlowError.invalidTransition(from: currentFlowState, to: .loading)
         }
 
         currentInput = input
-        try await transitionTo(.loading)
+
+        // Crear o reusar state machine con persistencia
+        let timeoutDuration: TimeInterval = 30 * 60 // 30 minutos default
+        let machine = AssessmentStateMachine(
+            assessmentId: input.assessmentId.uuidString,
+            persistence: persistence,
+            timeoutDuration: timeoutDuration
+        )
+        stateMachine = machine
+
+        // Intentar recuperar estado previo
+        if let recovered = try await machine.recoverState() {
+            if case .inProgress = recovered,
+               let savedAttempt = await localStorage.getInProgressAttempt(for: input.assessmentId),
+               savedAttempt.userId == input.userId {
+                // Recuperar assessment del cache y el intento en progreso
+                if let cached = await assessmentsRepository.getCached(id: input.assessmentId) {
+                    currentAssessment = cached
+                    currentAttempt = savedAttempt
+                    await syncCachedState()
+                    return cached
+                }
+            }
+            // Si no se puede recuperar completamente, resetear
+            try await machine.resetToIdle()
+        }
+
+        try await machine.startLoading()
+        cachedFlowState = .loading
 
         do {
             // Intentar cargar del servidor
@@ -498,13 +589,17 @@ public actor TakeAssessmentUseCase {
             await assessmentsRepository.cache(assessment)
 
             currentAssessment = assessment
-            try await transitionTo(.ready)
+            try await machine.transitionToReady()
 
             // Verificar si hay un intento en progreso guardado
             if let savedAttempt = await localStorage.getInProgressAttempt(for: input.assessmentId),
                savedAttempt.userId == input.userId {
                 currentAttempt = savedAttempt
-                try await transitionTo(.inProgress)
+                try await machine.startAssessment(totalQuestions: assessment.questions.count)
+                try await machine.updateAnsweredCount(savedAttempt.answers.count)
+                cachedFlowState = .inProgress
+            } else {
+                cachedFlowState = .ready
             }
 
             return assessment
@@ -513,20 +608,28 @@ public actor TakeAssessmentUseCase {
             // Intentar usar cache si falla la red
             if let cached = await assessmentsRepository.getCached(id: input.assessmentId) {
                 currentAssessment = cached
-                try await transitionTo(.ready)
+                try await machine.transitionToReady()
 
                 // Verificar intento en progreso
                 if let savedAttempt = await localStorage.getInProgressAttempt(for: input.assessmentId),
                    savedAttempt.userId == input.userId {
                     currentAttempt = savedAttempt
-                    try await transitionTo(.inProgress)
+                    try await machine.startAssessment(totalQuestions: cached.questions.count)
+                    try await machine.updateAnsweredCount(savedAttempt.answers.count)
+                    cachedFlowState = .inProgress
+                } else {
+                    cachedFlowState = .ready
                 }
 
                 return cached
             }
 
-            // No hay cache, volver a idle y propagar error
-            try await transitionTo(.idle)
+            // No hay cache, volver a error y propagar
+            try await machine.transitionToError(
+                .loadingFailed(reason: error.localizedDescription)
+            )
+            try await machine.resetToIdle()
+            cachedFlowState = .idle
             throw error
         }
     }
@@ -536,8 +639,8 @@ public actor TakeAssessmentUseCase {
     /// - Returns: ID del intento creado
     /// - Throws: Error si el estado no permite iniciar o la evaluación expiró
     public func startAttempt() async throws -> UUID {
-        guard currentState == .ready else {
-            throw TakeAssessmentFlowError.cannotStartFromState(currentState)
+        guard state == .ready else {
+            throw TakeAssessmentFlowError.cannotStartFromState(state)
         }
 
         guard let assessment = currentAssessment else {
@@ -545,6 +648,10 @@ public actor TakeAssessmentUseCase {
         }
 
         guard let input = currentInput else {
+            throw TakeAssessmentFlowError.assessmentNotLoaded
+        }
+
+        guard let machine = stateMachine else {
             throw TakeAssessmentFlowError.assessmentNotLoaded
         }
 
@@ -576,14 +683,17 @@ public actor TakeAssessmentUseCase {
         currentAttempt = attempt
         await localStorage.saveInProgressAttempt(attempt)
 
-        try await transitionTo(.inProgress)
+        // Transicionar state machine a inProgress
+        try await machine.startAssessment(totalQuestions: assessment.questions.count)
+        cachedFlowState = .inProgress
 
         return attemptId
     }
 
     /// Guarda una respuesta del usuario.
     ///
-    /// Persiste localmente para soporte offline.
+    /// Persiste localmente para soporte offline. Actualiza el conteo
+    /// de respuestas en el state machine.
     ///
     /// - Parameters:
     ///   - questionId: ID de la pregunta
@@ -594,7 +704,7 @@ public actor TakeAssessmentUseCase {
         selectedOptionId: UUID,
         timeSpentSeconds: Int
     ) async throws {
-        guard currentState == .inProgress else {
+        guard state == .inProgress else {
             throw TakeAssessmentFlowError.noAttemptInProgress
         }
 
@@ -602,7 +712,16 @@ public actor TakeAssessmentUseCase {
             throw TakeAssessmentFlowError.noAttemptInProgress
         }
 
-        // Verificar tiempo límite
+        guard let machine = stateMachine else {
+            throw TakeAssessmentFlowError.noAttemptInProgress
+        }
+
+        // Verificar timeout via state machine
+        if await machine.hasTimedOut() {
+            throw TakeAssessmentFlowError.attemptExpired
+        }
+
+        // Verificar tiempo límite del assessment
         if let assessment = currentAssessment,
            let timeLimit = assessment.timeLimitSeconds,
            attempt.elapsedSeconds > timeLimit {
@@ -620,6 +739,9 @@ public actor TakeAssessmentUseCase {
 
         // Persistir localmente
         await localStorage.saveInProgressAttempt(attempt)
+
+        // Actualizar conteo en state machine
+        try await machine.updateAnsweredCount(attempt.answers.count)
     }
 
     /// Envía las respuestas y completa el intento.
@@ -627,8 +749,8 @@ public actor TakeAssessmentUseCase {
     /// - Returns: Resultado del intento con score y feedback
     /// - Throws: Error si las respuestas están incompletas o el tiempo expiró
     public func submitAttempt() async throws -> AttemptResult {
-        guard currentState == .inProgress else {
-            throw TakeAssessmentFlowError.cannotSubmitFromState(currentState)
+        guard state == .inProgress else {
+            throw TakeAssessmentFlowError.cannotSubmitFromState(state)
         }
 
         guard let attempt = currentAttempt else {
@@ -639,12 +761,21 @@ public actor TakeAssessmentUseCase {
             throw TakeAssessmentFlowError.assessmentNotLoaded
         }
 
+        guard let machine = stateMachine else {
+            throw TakeAssessmentFlowError.assessmentNotLoaded
+        }
+
         // Verificar duplicado
         if submittedIdempotencyKeys.contains(attempt.idempotencyKey) {
             throw TakeAssessmentFlowError.duplicateSubmission
         }
 
-        // Verificar tiempo límite
+        // Verificar timeout via state machine
+        if await machine.hasTimedOut() {
+            throw TakeAssessmentFlowError.attemptExpired
+        }
+
+        // Verificar tiempo límite del assessment
         if let timeLimit = assessment.timeLimitSeconds,
            attempt.elapsedSeconds > timeLimit {
             throw TakeAssessmentFlowError.attemptExpired
@@ -659,7 +790,9 @@ public actor TakeAssessmentUseCase {
             throw TakeAssessmentFlowError.incompleteAnswers(missing: missingCount)
         }
 
-        try await transitionTo(.submitting)
+        // Transicionar a submitting
+        try await machine.submit()
+        cachedFlowState = .submitting
 
         do {
             let result = try await attemptsRepository.submitAttempt(
@@ -676,7 +809,13 @@ public actor TakeAssessmentUseCase {
             await localStorage.removeInProgressAttempt(for: assessment.id)
 
             currentAttempt = nil
-            try await transitionTo(.completed)
+
+            // Transicionar a completed con score normalizado
+            let normalizedScore = result.maxScore > 0
+                ? Double(result.score) / Double(result.maxScore)
+                : 0.0
+            try await machine.complete(score: normalizedScore)
+            cachedFlowState = .completed
 
             return result
 
@@ -692,8 +831,26 @@ public actor TakeAssessmentUseCase {
             )
             await localStorage.addPendingSubmission(pending)
 
-            // Volver a in_progress para permitir reintento
-            try await transitionTo(.inProgress)
+            // Volver a inProgress via error -> idle -> reload path
+            // Para mantener compatibilidad, usamos transitionToError y luego resetToIdle
+            try await machine.transitionToError(
+                .submissionFailed(reason: error.localizedDescription)
+            )
+            try await machine.resetToIdle()
+
+            // Re-inicializar el state machine para permitir reintento
+            let newMachine = AssessmentStateMachine(
+                assessmentId: assessment.id.uuidString,
+                persistence: persistence,
+                timeoutDuration: 30 * 60
+            )
+            stateMachine = newMachine
+            // Restaurar a inProgress para que el caller pueda reintentar
+            try await newMachine.startLoading()
+            try await newMachine.transitionToReady()
+            try await newMachine.startAssessment(totalQuestions: assessment.questions.count)
+            try await newMachine.updateAnsweredCount(attempt.answers.count)
+            cachedFlowState = .inProgress
 
             throw error
         }
@@ -701,12 +858,24 @@ public actor TakeAssessmentUseCase {
 
     /// Reinicia el estado para tomar otra evaluación.
     public func reset() async {
-        currentState = .idle
+        let savedInput = currentInput
+
+        if let machine = stateMachine {
+            do {
+                try await machine.transitionToError(.cancelled)
+                try await machine.resetToIdle()
+            } catch {
+                // El state machine ya puede estar en idle u otro estado terminal
+            }
+        }
+
+        stateMachine = nil
         currentAssessment = nil
         currentAttempt = nil
         currentInput = nil
+        cachedFlowState = .idle
 
-        if let input = currentInput {
+        if let input = savedInput {
             await localStorage.saveState(.idle, for: input.assessmentId)
         }
     }
@@ -754,28 +923,25 @@ public actor TakeAssessmentUseCase {
         await localStorage.getInProgressAttempt(for: input.assessmentId)
     }
 
-    // MARK: - Private Methods
-
-    /// Valida y ejecuta una transición de estado.
-    private func transitionTo(_ newState: TakeAssessmentFlowState) async throws {
-        let validTransitions: [TakeAssessmentFlowState: Set<TakeAssessmentFlowState>] = [
-            .idle: [.loading],
-            .loading: [.ready, .idle],
-            .ready: [.inProgress, .loading],
-            .inProgress: [.submitting, .ready],
-            .submitting: [.completed, .inProgress],
-            .completed: [.idle]
-        ]
-
-        guard let allowed = validTransitions[currentState],
-              allowed.contains(newState) else {
-            throw TakeAssessmentFlowError.invalidTransition(from: currentState, to: newState)
+    /// Tiempo restante para el intento actual, o nil si no hay intento en progreso.
+    public var remainingTime: TimeInterval? {
+        get async {
+            await stateMachine?.remainingTime()
         }
+    }
 
-        currentState = newState
+    // MARK: - Private Helpers
 
-        if let input = currentInput {
-            await localStorage.saveState(newState, for: input.assessmentId)
+    /// Sincroniza el estado cacheado con el estado actual del state machine.
+    ///
+    /// Debe llamarse despues de cada transicion del state machine para mantener
+    /// la propiedad `state` actualizada sin requerir `await`.
+    private func syncCachedState() async {
+        guard let machine = stateMachine else {
+            cachedFlowState = .idle
+            return
         }
+        let currentMachineState = await machine.currentState
+        cachedFlowState = TakeAssessmentFlowState.from(currentMachineState)
     }
 }
