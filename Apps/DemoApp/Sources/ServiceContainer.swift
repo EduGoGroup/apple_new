@@ -63,6 +63,20 @@ final class ServiceContainer {
 
     let toastManager: ToastManager
 
+    // MARK: - Assessment (Network Services - Infrastructure)
+
+    let assessmentsNetworkService: AssessmentsNetworkService
+    let attemptsNetworkService: AttemptsNetworkService
+    let eligibilityNetworkService: EligibilityNetworkService
+
+    // MARK: - Assessment (Domain Repositories & Services)
+
+    let assessmentsRepository: AssessmentsRepository
+    let attemptsRepository: AttemptsRepository
+    let eligibilityService: EligibilityService
+    let assessmentCacheService: AssessmentCacheService
+    let loadAssessmentUseCase: LoadAssessmentUseCase
+
     // MARK: - Config
 
     let apiConfiguration: APIConfiguration
@@ -163,5 +177,50 @@ final class ServiceContainer {
 
         // 13. Feedback
         self.toastManager = ToastManager.shared
+
+        // 14. Assessment Network Services (Infrastructure layer)
+        let assessmentsNetSvc = AssessmentsNetworkService(
+            client: authenticatedClient,
+            baseURL: config.mobileBaseURL
+        )
+        self.assessmentsNetworkService = assessmentsNetSvc
+
+        let attemptsNetSvc = AttemptsNetworkService(
+            client: authenticatedClient,
+            baseURL: config.mobileBaseURL
+        )
+        self.attemptsNetworkService = attemptsNetSvc
+
+        let eligibilityNetSvc = EligibilityNetworkService(
+            client: authenticatedClient,
+            baseURL: config.mobileBaseURL
+        )
+        self.eligibilityNetworkService = eligibilityNetSvc
+
+        // 15. Assessment Repositories & Services (Domain layer, wrapping Infrastructure)
+        let assessmentsRepo = AssessmentsRepository(
+            networkService: assessmentsNetSvc
+        )
+        self.assessmentsRepository = assessmentsRepo
+
+        let attemptsRepo = AttemptsRepository(
+            networkService: attemptsNetSvc
+        )
+        self.attemptsRepository = attemptsRepo
+
+        let eligibility = EligibilityService(
+            networkService: eligibilityNetSvc
+        )
+        self.eligibilityService = eligibility
+
+        let cacheService = AssessmentCacheService()
+        self.assessmentCacheService = cacheService
+
+        // 16. Assessment Use Cases
+        self.loadAssessmentUseCase = LoadAssessmentUseCase(
+            assessmentsRepository: assessmentsRepo,
+            eligibilityService: eligibility,
+            cacheService: cacheService
+        )
     }
 }
