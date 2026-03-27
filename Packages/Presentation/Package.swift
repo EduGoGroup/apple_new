@@ -13,6 +13,7 @@ let package = Package(
     dependencies: [
         .package(path: "../Foundation"),
         .package(path: "../Core"),
+        .package(path: "../Infrastructure"),
         .package(path: "../Domain")
     ],
     targets: [
@@ -21,6 +22,7 @@ let package = Package(
             dependencies: [
                 .product(name: "EduFoundation", package: "Foundation"),
                 .product(name: "EduCore", package: "Core"),
+                .product(name: "EduInfrastructure", package: "Infrastructure"),
                 .product(name: "EduDomain", package: "Domain")
             ],
             path: "Sources"
@@ -31,6 +33,7 @@ let package = Package(
                 "EduPresentation",
                 .product(name: "EduFoundation", package: "Foundation"),
                 .product(name: "EduCore", package: "Core"),
+                .product(name: "EduInfrastructure", package: "Infrastructure"),
                 .product(name: "EduDomain", package: "Domain")
             ],
             path: "Tests"
