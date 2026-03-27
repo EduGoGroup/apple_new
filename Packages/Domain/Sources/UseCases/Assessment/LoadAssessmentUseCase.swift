@@ -52,6 +52,7 @@ public enum EligibilityReason: String, Sendable, Equatable, Codable {
     case noAttemptsLeft = "no_attempts_left"
     case expired = "expired"
     case notEnrolled = "not_enrolled"
+    case networkError = "network_error"
     case unknown = "unknown"
 }
 
@@ -358,7 +359,7 @@ public actor LoadAssessmentUseCase: UseCase {
         try await assessmentsRepository.get(id: id)
     }
 
-    /// Fetch eligibility con fallback a canTake=false si falla.
+    /// Fetch eligibility con fallback a canTake=false si falla por red.
     private func fetchEligibility(
         assessmentId: UUID,
         userId: UUID
@@ -369,10 +370,11 @@ public actor LoadAssessmentUseCase: UseCase {
                 userId: userId
             )
         } catch {
-            // Eligibility check fails: asumir canTake=false con reason=unknown
+            // Eligibility check fails por red: reason=networkError para que la UI
+            // pueda mostrar "No se pudo verificar elegibilidad" en vez de un bloqueo silencioso.
             return AssessmentEligibility(
                 canTake: false,
-                reason: .unknown,
+                reason: .networkError,
                 attemptsLeft: 0,
                 expiresAt: nil
             )
