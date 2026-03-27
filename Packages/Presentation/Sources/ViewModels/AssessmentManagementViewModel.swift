@@ -1,7 +1,8 @@
 import Foundation
-import SwiftUI
+import Observation
 import EduDomain
 import EduCore
+import EduInfrastructure
 
 /// ViewModel para la lista de gestion de assessments del profesor.
 ///
@@ -121,9 +122,22 @@ public final class AssessmentManagementViewModel {
         error = nil
     }
 
-    /// Refresca la lista desde el servidor.
+    /// Refresca la lista desde el servidor, ignorando el guard isLoading.
     public func refresh() async {
-        await loadAssessments()
+        isLoading = true
+        error = nil
+
+        do {
+            let response = try await dataProvider.listAssessments(
+                status: statusFilter,
+                page: 1,
+                limit: pageSize
+            )
+            self.assessments = response.items
+        } catch {
+            self.error = error
+        }
+        self.isLoading = false
     }
 
     // MARK: - Computed Properties

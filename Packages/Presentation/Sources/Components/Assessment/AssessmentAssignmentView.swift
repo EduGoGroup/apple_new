@@ -77,8 +77,11 @@ public struct AssessmentAssignmentView: View {
             .task {
                 await viewModel.loadAssignments()
             }
-            .alert("Error", isPresented: .constant(viewModel.hasError)) {
-                Button("Aceptar") { viewModel.clearError() }
+            .alert("Error", isPresented: Binding(
+                get: { viewModel.hasError },
+                set: { if !$0 { viewModel.clearError() } }
+            )) {
+                Button("Aceptar", role: .cancel) { }
             } message: {
                 Text(viewModel.errorMessage ?? "Error desconocido")
             }
@@ -216,8 +219,8 @@ public struct AssessmentAssignmentView: View {
 
     private func deleteAssignments(at offsets: IndexSet) {
         let assignmentsToDelete = offsets.map { viewModel.assignments[$0] }
-        for assignment in assignmentsToDelete {
-            Task {
+        Task {
+            for assignment in assignmentsToDelete {
                 await viewModel.removeAssignment(assignment.id)
             }
         }

@@ -114,8 +114,11 @@ public struct AssessmentFormView: View {
                     await loadQuestions()
                 }
             }
-            .alert("Error", isPresented: .constant(error != nil)) {
-                Button("Aceptar") { error = nil }
+            .alert("Error", isPresented: Binding(
+                get: { error != nil },
+                set: { if !$0 { error = nil } }
+            )) {
+                Button("Aceptar", role: .cancel) { }
             } message: {
                 Text(error?.localizedDescription ?? "Error desconocido")
             }
@@ -265,6 +268,7 @@ public struct AssessmentFormView: View {
 
     private func saveDraft() async {
         isSaving = true
+        defer { isSaving = false }
         error = nil
 
         do {
@@ -290,26 +294,22 @@ public struct AssessmentFormView: View {
                 assessmentId = created.id
                 assessmentStatus = created.status
             }
-
-            isSaving = false
         } catch {
             self.error = error
-            isSaving = false
         }
     }
 
     private func publish() async {
         guard let id = assessmentId else { return }
         isSaving = true
+        defer { isSaving = false }
         error = nil
 
         do {
             let updated = try await dataProvider.publishAssessment(id: id)
             assessmentStatus = updated.status
-            isSaving = false
         } catch {
             self.error = error
-            isSaving = false
         }
     }
 
@@ -345,11 +345,16 @@ public struct AssessmentFormView: View {
     private func deleteQuestions(at offsets: IndexSet) {
         guard let id = assessmentId else { return }
         let questionsToDelete = offsets.map { questions[$0] }
-        questions.remove(atOffsets: offsets)
 
         Task {
             for question in questionsToDelete {
-                try? await dataProvider.deleteQuestion(assessmentId: id, questionId: question.id)
+                do {
+                    try await dataProvider.deleteQuestion(assessmentId: id, questionId: question.id)
+                    questions.removeAll { $0.id == question.id }
+                } catch {
+                    self.error = error
+                    break
+                }
             }
         }
     }

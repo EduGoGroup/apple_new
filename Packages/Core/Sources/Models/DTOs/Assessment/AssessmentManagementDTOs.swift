@@ -323,28 +323,3 @@ public struct AssignmentResponseDTO: Decodable, Sendable, Equatable, Identifiabl
     }
 }
 
-/// Respuesta paginada generica para endpoints de assessments.
-public struct PaginatedResponseDTO<T: Decodable & Sendable>: Decodable, Sendable {
-    public let items: [T]
-    public let totalCount: Int
-    public let page: Int
-    public let pageSize: Int
-
-    public var hasNextPage: Bool {
-        page * pageSize < totalCount
-    }
-
-    public init(items: [T], totalCount: Int, page: Int, pageSize: Int) {
-        self.items = items
-        self.totalCount = totalCount
-        self.page = page
-        self.pageSize = pageSize
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case items
-        case totalCount = "total_count"
-        case page
-        case pageSize = "page_size"
-    }
-}

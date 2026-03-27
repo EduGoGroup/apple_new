@@ -173,7 +173,7 @@ public actor AssessmentManagementNetworkService {
     ///   - page: Numero de pagina (1-based).
     ///   - limit: Tamano de pagina.
     /// - Returns: Respuesta paginada de assessments.
-    public func listAssessments(status: String?, page: Int, limit: Int) async throws -> PaginatedResponseDTO<AssessmentManagementResponseDTO> {
+    public func listAssessments(status: String?, page: Int, limit: Int) async throws -> PaginatedResponse<AssessmentManagementResponseDTO> {
         var url = baseURL + Endpoints.assessments + "?page=\(page)&limit=\(limit)"
         if let status {
             url += "&status=\(status)"

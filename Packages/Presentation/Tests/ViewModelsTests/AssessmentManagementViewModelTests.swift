@@ -3,6 +3,7 @@ import Foundation
 @testable import EduPresentation
 @testable import EduDomain
 import EduCore
+import EduInfrastructure
 
 // MARK: - Mock Assessment Management Data Provider
 
@@ -67,7 +68,7 @@ actor MockAssessmentManagementDataProvider: AssessmentManagementDataProvider {
         )
     }
 
-    func listAssessments(status: String?, page: Int, limit: Int) async throws -> PaginatedResponseDTO<AssessmentManagementResponseDTO> {
+    func listAssessments(status: String?, page: Int, limit: Int) async throws -> PaginatedResponse<AssessmentManagementResponseDTO> {
         if let error = stubbedError { throw error }
         let filtered: [AssessmentManagementResponseDTO]
         if let status {
@@ -75,7 +76,7 @@ actor MockAssessmentManagementDataProvider: AssessmentManagementDataProvider {
         } else {
             filtered = stubbedAssessments
         }
-        return PaginatedResponseDTO(
+        return PaginatedResponse(
             items: filtered,
             totalCount: filtered.count,
             page: page,

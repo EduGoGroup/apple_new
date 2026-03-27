@@ -103,19 +103,15 @@ public struct AssessmentManagementListView: View {
                 ProgressView("Cargando evaluaciones...")
             }
         }
-        .task {
+        .task(id: selectedFilter) {
+            viewModel.statusFilter = selectedFilter.apiValue
             await viewModel.loadAssessments()
         }
-        .onChange(of: selectedFilter) { _, newValue in
-            viewModel.statusFilter = newValue.apiValue
-            Task {
-                await viewModel.loadAssessments()
-            }
-        }
-        .alert("Error", isPresented: .constant(viewModel.hasError)) {
-            Button("Aceptar") {
-                viewModel.clearError()
-            }
+        .alert("Error", isPresented: Binding(
+            get: { viewModel.hasError },
+            set: { if !$0 { viewModel.clearError() } }
+        )) {
+            Button("Aceptar", role: .cancel) { }
         } message: {
             Text(viewModel.errorMessage ?? "Error desconocido")
         }

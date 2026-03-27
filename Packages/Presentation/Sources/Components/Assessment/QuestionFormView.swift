@@ -91,8 +91,11 @@ public struct QuestionFormView: View {
             .task {
                 await viewModel.loadQuestion()
             }
-            .alert("Error", isPresented: .constant(viewModel.hasError)) {
-                Button("Aceptar") { viewModel.clearError() }
+            .alert("Error", isPresented: Binding(
+                get: { viewModel.hasError },
+                set: { if !$0 { viewModel.clearError() } }
+            )) {
+                Button("Aceptar", role: .cancel) { }
             } message: {
                 Text(viewModel.errorMessage ?? "Error desconocido")
             }

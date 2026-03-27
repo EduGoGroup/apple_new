@@ -1,5 +1,6 @@
 import Foundation
 import EduCore
+import EduInfrastructure
 
 // MARK: - Assessment Management Data Provider Protocol
 
@@ -27,7 +28,7 @@ public protocol AssessmentManagementDataProvider: Sendable {
     func updateAssessment(id: String, _ request: CreateAssessmentRequestDTO) async throws -> AssessmentManagementResponseDTO
 
     /// Lista assessments con filtro opcional por estado y paginacion.
-    func listAssessments(status: String?, page: Int, limit: Int) async throws -> PaginatedResponseDTO<AssessmentManagementResponseDTO>
+    func listAssessments(status: String?, page: Int, limit: Int) async throws -> PaginatedResponse<AssessmentManagementResponseDTO>
 
     /// Obtiene el detalle de un assessment por ID.
     func getAssessment(id: String) async throws -> AssessmentManagementResponseDTO
