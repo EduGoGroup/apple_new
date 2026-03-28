@@ -60,10 +60,16 @@ public final class AssessmentViewModel {
     /// Resultado del intento después del envío
     public var attemptResult: AttemptResult?
 
-    /// Tiempo transcurrido en segundos
+    /// Tiempo transcurrido en segundos.
+    ///
+    /// Calculado desde `startDate` cuando el timer esta activo,
+    /// para que sea correcto incluso despues de background/suspend.
     public var elapsedSeconds: Int = 0
 
-    /// Timer para tracking de tiempo
+    /// Fecha de inicio del timer, usada para calcular tiempo real transcurrido.
+    private var startDate: Date?
+
+    /// Timer para actualizar `elapsedSeconds` cada segundo en la UI.
     private var timer: Timer?
 
     // MARK: - Dependencies
@@ -243,6 +249,7 @@ public final class AssessmentViewModel {
     public func reset() {
         answers.removeAll()
         elapsedSeconds = 0
+        startDate = nil
         attemptResult = nil
         error = nil
         stopTimer()
@@ -251,12 +258,18 @@ public final class AssessmentViewModel {
     // MARK: - Timer Management
 
     /// Inicia el timer de tracking de tiempo.
+    ///
+    /// Usa `startDate` para calcular el tiempo real transcurrido en cada tick,
+    /// lo que garantiza precision incluso si la app estuvo en background.
     private func startTimer() {
         stopTimer() // Detener timer anterior si existe
 
+        startDate = Date()
+
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.elapsedSeconds += 1
+                guard let self, let start = self.startDate else { return }
+                self.elapsedSeconds = Int(Date().timeIntervalSince(start))
             }
         }
     }
