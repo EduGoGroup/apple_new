@@ -102,7 +102,7 @@ extension AuthContext {
             schoolId: dto.schoolId,
             schoolName: dto.schoolName,
             academicUnitId: dto.academicUnitId,
-            permissions: dto.permissions
+            permissions: dto.permissions ?? []
         )
     }
 }

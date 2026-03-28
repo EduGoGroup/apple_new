@@ -25,7 +25,7 @@ public struct SyncBundleResponseDTO: Codable, Sendable {
     public let menu: [MenuItemDTO]
 
     /// Flat list of granted permission keys.
-    public let permissions: [String]
+    public let permissions: [String]?
 
     /// Map of screen keys to their full bundle definitions.
     public let screens: [String: ScreenBundleDTO]
@@ -54,7 +54,7 @@ public struct SyncBundleResponseDTO: Codable, Sendable {
 
     public init(
         menu: [MenuItemDTO],
-        permissions: [String],
+        permissions: [String]? = [],
         screens: [String: ScreenBundleDTO],
         availableContexts: [UserContextDTO],
         hashes: [String: String],

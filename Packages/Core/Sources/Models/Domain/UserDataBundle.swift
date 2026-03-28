@@ -77,7 +77,7 @@ extension UserDataBundle {
     public static func from(response: SyncBundleResponseDTO) -> UserDataBundle {
         UserDataBundle(
             menu: response.menu,
-            permissions: response.permissions,
+            permissions: response.permissions ?? [],
             screens: response.screens,
             availableContexts: response.availableContexts,
             hashes: response.hashes,

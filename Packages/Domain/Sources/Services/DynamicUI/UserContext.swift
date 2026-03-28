@@ -30,7 +30,7 @@ public struct ScreenUserContext: Sendable {
         self.roleId = dto.roleId
         self.roleName = dto.roleName
         self.schoolId = dto.schoolId
-        self.permissions = dto.permissions
+        self.permissions = dto.permissions ?? []
     }
 
     /// Crea un `ScreenUserContext` a partir de un `AuthContext`.
