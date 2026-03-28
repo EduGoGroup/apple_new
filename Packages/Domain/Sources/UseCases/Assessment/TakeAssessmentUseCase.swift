@@ -110,6 +110,7 @@ public struct TakeAssessmentInput: Sendable, Equatable {
 public struct AssessmentQuestion: Sendable, Equatable, Identifiable, Codable {
     public let id: UUID
     public let text: String
+    public let questionType: String
     public let options: [QuestionOption]
     public let isRequired: Bool
     public let orderIndex: Int
@@ -117,12 +118,14 @@ public struct AssessmentQuestion: Sendable, Equatable, Identifiable, Codable {
     public init(
         id: UUID,
         text: String,
+        questionType: String = "multiple_choice",
         options: [QuestionOption],
         isRequired: Bool = true,
         orderIndex: Int
     ) {
         self.id = id
         self.text = text
+        self.questionType = questionType
         self.options = options
         self.isRequired = isRequired
         self.orderIndex = orderIndex
@@ -219,16 +222,25 @@ public struct AnswerFeedback: Sendable, Equatable, Codable {
     public let correctOptionId: UUID
     public let explanation: String?
 
+    /// ID de la opcion que el estudiante selecciono.
+    ///
+    /// Puede ser nil si el backend no lo incluye en la respuesta.
+    /// Cuando esta disponible, permite mostrar la respuesta concreta
+    /// del estudiante en la pantalla de resultados.
+    public let studentSelectedOptionId: UUID?
+
     public init(
         questionId: UUID,
         isCorrect: Bool,
         correctOptionId: UUID,
-        explanation: String? = nil
+        explanation: String? = nil,
+        studentSelectedOptionId: UUID? = nil
     ) {
         self.questionId = questionId
         self.isCorrect = isCorrect
         self.correctOptionId = correctOptionId
         self.explanation = explanation
+        self.studentSelectedOptionId = studentSelectedOptionId
     }
 }
 

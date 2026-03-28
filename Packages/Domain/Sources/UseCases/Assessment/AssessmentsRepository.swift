@@ -79,6 +79,7 @@ public actor AssessmentsRepository: AssessmentsRepositoryProtocol {
         AssessmentQuestion(
             id: UUID(uuidString: dto.id) ?? UUID(),
             text: dto.text,
+            questionType: dto.questionType,
             options: dto.options.map { mapOptionToDomain($0) },
             isRequired: dto.isRequired,
             orderIndex: dto.orderIndex

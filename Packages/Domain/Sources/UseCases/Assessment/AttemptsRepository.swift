@@ -132,7 +132,8 @@ public actor AttemptsRepository: AttemptsRepositoryProtocol {
             questionId: UUID(uuidString: dto.questionId) ?? UUID(),
             isCorrect: dto.isCorrect,
             correctOptionId: UUID(uuidString: dto.correctOptionId) ?? UUID(),
-            explanation: dto.explanation
+            explanation: dto.explanation,
+            studentSelectedOptionId: dto.studentSelectedOptionId.flatMap { UUID(uuidString: $0) }
         )
     }
 }
