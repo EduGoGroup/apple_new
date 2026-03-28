@@ -105,7 +105,7 @@ public actor SyncService {
 
             let bundle = UserDataBundle(
                 menu: response.menu,
-                permissions: response.permissions,
+                permissions: response.permissions ?? [],
                 screens: response.screens,
                 availableContexts: response.availableContexts,
                 hashes: response.hashes,
@@ -157,7 +157,7 @@ public actor SyncService {
 
             let partialBundle = UserDataBundle(
                 menu: response.menu,
-                permissions: response.permissions,
+                permissions: response.permissions ?? [],
                 screens: response.screens,
                 availableContexts: response.availableContexts,
                 hashes: response.hashes,
