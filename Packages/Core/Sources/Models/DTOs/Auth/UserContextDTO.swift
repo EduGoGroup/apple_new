@@ -24,7 +24,7 @@ public struct UserContextDTO: Codable, Sendable, Equatable, Hashable {
     public let schoolId: String?
     public let schoolName: String?
     public let academicUnitId: String?
-    public let permissions: [String]
+    public let permissions: [String]?
 
     enum CodingKeys: String, CodingKey {
         case roleId = "role_id"
@@ -41,7 +41,7 @@ public struct UserContextDTO: Codable, Sendable, Equatable, Hashable {
         schoolId: String? = nil,
         schoolName: String? = nil,
         academicUnitId: String? = nil,
-        permissions: [String] = []
+        permissions: [String]? = []
     ) {
         self.roleId = roleId
         self.roleName = roleName
