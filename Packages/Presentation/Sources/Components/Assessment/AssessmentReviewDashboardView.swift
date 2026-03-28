@@ -123,6 +123,14 @@ public struct AssessmentReviewDashboardView: View {
         } message: {
             Text(viewModel.errorMessage ?? "Error desconocido")
         }
+        .alert("Exito", isPresented: Binding(
+            get: { viewModel.successMessage != nil },
+            set: { if !$0 { viewModel.clearSuccess() } }
+        )) {
+            Button("Aceptar", role: .cancel) { }
+        } message: {
+            Text(viewModel.successMessage ?? "")
+        }
         .confirmationDialog(
             "Finalizar Todas las Revisiones",
             isPresented: $showFinalizeAllConfirmation,
@@ -146,14 +154,17 @@ public struct AssessmentReviewDashboardView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: DesignTokens.Spacing.medium) {
+                // averageScore: backend returns percentage 0-100
+                // (average of attempt percentages, each = score/maxScore * 100)
                 StatCard(
                     title: "Promedio",
                     value: String(format: "%.1f%%", stats.averageScore),
                     icon: "chart.bar.fill"
                 )
+                // passRate: backend returns percentage 0-100
                 StatCard(
                     title: "Aprobados",
-                    value: String(format: "%.0f%%", stats.passRate * 100),
+                    value: String(format: "%.0f%%", stats.passRate),
                     icon: "checkmark.circle.fill"
                 )
                 StatCard(

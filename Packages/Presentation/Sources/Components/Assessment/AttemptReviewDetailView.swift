@@ -79,6 +79,14 @@ public struct AttemptReviewDetailView: View {
         } message: {
             Text(viewModel.errorMessage ?? "Error desconocido")
         }
+        .alert("Exito", isPresented: Binding(
+            get: { viewModel.successMessage != nil },
+            set: { if !$0 { viewModel.clearSuccess() } }
+        )) {
+            Button("Aceptar", role: .cancel) { }
+        } message: {
+            Text(viewModel.successMessage ?? "")
+        }
         .confirmationDialog(
             "Finalizar Revision",
             isPresented: $showFinalizeConfirmation,
@@ -438,6 +446,12 @@ private struct EditableAnswerCard: View {
             }
             .buttonStyle(.bordered)
             .disabled(viewModel.isSavingReview)
+        }
+        .onChange(of: answer.pointsEarned) { _, newValue in
+            pointsAwarded = newValue ?? 0
+        }
+        .onChange(of: answer.reviewFeedback) { _, newValue in
+            feedback = newValue ?? ""
         }
         .onAppear {
             pointsAwarded = answer.pointsEarned ?? 0

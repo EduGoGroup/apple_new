@@ -43,6 +43,31 @@ extension AssessmentReviewNetworkError: LocalizedError {
     }
 }
 
+// MARK: - Assessment Review Network Service Protocol
+
+/// Protocolo para el servicio de red de revision de assessments.
+///
+/// Permite inyectar un mock en tests sin depender del actor concreto.
+public protocol AssessmentReviewNetworkServiceProtocol: Sendable {
+    /// Lista los intentos de un assessment para revision.
+    func listAttempts(assessmentId: String) async throws -> [TeacherAttemptSummaryDTO]
+
+    /// Obtiene las estadisticas de un assessment.
+    func getStats(assessmentId: String) async throws -> AssessmentStatsDTO
+
+    /// Obtiene el detalle de un intento para revision.
+    func getAttemptForReview(attemptId: String) async throws -> AttemptReviewDetailDTO
+
+    /// Califica una respuesta individual.
+    func reviewAnswer(attemptId: String, answerId: String, request: ReviewAnswerRequestDTO) async throws
+
+    /// Finaliza la revision de un intento.
+    func finalizeAttempt(attemptId: String) async throws
+
+    /// Finaliza todos los intentos de un assessment.
+    func finalizeAll(assessmentId: String) async throws
+}
+
 // MARK: - Assessment Review Network Service
 
 /// Servicio de red para la revision de assessments por el profesor.
@@ -64,7 +89,7 @@ extension AssessmentReviewNetworkError: LocalizedError {
 ///
 /// let attempts = try await service.listAttempts(assessmentId: "uuid-string")
 /// ```
-public actor AssessmentReviewNetworkService {
+public actor AssessmentReviewNetworkService: AssessmentReviewNetworkServiceProtocol {
 
     // MARK: - Properties
 

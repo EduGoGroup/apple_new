@@ -35,9 +35,33 @@ public struct TeacherAttemptSummaryDTO: Codable, Sendable, Equatable, Identifiab
     public let pendingReviews: Int
 
     /// Fecha de completado del intento.
-    public let completedAt: String?
+    public let completedAt: Date?
 
     public var id: String { attemptId }
+
+    public init(
+        attemptId: String,
+        studentId: String,
+        studentName: String,
+        studentEmail: String,
+        score: Double? = nil,
+        maxScore: Double? = nil,
+        percentage: Double? = nil,
+        status: String,
+        pendingReviews: Int = 0,
+        completedAt: Date? = nil
+    ) {
+        self.attemptId = attemptId
+        self.studentId = studentId
+        self.studentName = studentName
+        self.studentEmail = studentEmail
+        self.score = score
+        self.maxScore = maxScore
+        self.percentage = percentage
+        self.status = status
+        self.pendingReviews = pendingReviews
+        self.completedAt = completedAt
+    }
 
     enum CodingKeys: String, CodingKey {
         case attemptId = "attempt_id"
@@ -68,7 +92,7 @@ public struct AssessmentStatsDTO: Codable, Sendable, Equatable {
     /// Intentos pendientes de revision.
     public let pendingReviews: Int
 
-    /// Puntaje promedio.
+    /// Puntaje promedio (porcentaje 0-100, promedio de los porcentajes de intentos completados).
     public let averageScore: Double
 
     /// Puntaje mediano.
@@ -80,7 +104,7 @@ public struct AssessmentStatsDTO: Codable, Sendable, Equatable {
     /// Puntaje mas bajo.
     public let lowestScore: Double
 
-    /// Tasa de aprobacion (0.0 - 1.0).
+    /// Tasa de aprobacion (porcentaje 0-100, no 0.0-1.0).
     public let passRate: Double
 
     /// Tiempo promedio en segundos.
@@ -88,6 +112,30 @@ public struct AssessmentStatsDTO: Codable, Sendable, Equatable {
 
     /// Estadisticas por pregunta.
     public let questionStats: [QuestionStatDTO]
+
+    public init(
+        totalAttempts: Int,
+        completedAttempts: Int,
+        pendingReviews: Int,
+        averageScore: Double,
+        medianScore: Double,
+        highestScore: Double,
+        lowestScore: Double,
+        passRate: Double,
+        averageTimeSeconds: Int,
+        questionStats: [QuestionStatDTO] = []
+    ) {
+        self.totalAttempts = totalAttempts
+        self.completedAttempts = completedAttempts
+        self.pendingReviews = pendingReviews
+        self.averageScore = averageScore
+        self.medianScore = medianScore
+        self.highestScore = highestScore
+        self.lowestScore = lowestScore
+        self.passRate = passRate
+        self.averageTimeSeconds = averageTimeSeconds
+        self.questionStats = questionStats
+    }
 
     enum CodingKeys: String, CodingKey {
         case totalAttempts = "total_attempts"
@@ -158,6 +206,24 @@ public struct AttemptReviewDetailDTO: Codable, Sendable, Equatable {
     /// Puntaje maximo posible.
     public let maxScore: Double
 
+    public init(
+        attemptId: String,
+        studentName: String,
+        studentEmail: String,
+        status: String,
+        answers: [AnswerForReviewDTO],
+        currentScore: Double,
+        maxScore: Double
+    ) {
+        self.attemptId = attemptId
+        self.studentName = studentName
+        self.studentEmail = studentEmail
+        self.status = status
+        self.answers = answers
+        self.currentScore = currentScore
+        self.maxScore = maxScore
+    }
+
     enum CodingKeys: String, CodingKey {
         case attemptId = "attempt_id"
         case studentName = "student_name"
@@ -207,6 +273,32 @@ public struct AnswerForReviewDTO: Codable, Sendable, Equatable, Identifiable {
     public let reviewFeedback: String?
 
     public var id: String { answerId }
+
+    public init(
+        answerId: String,
+        questionIndex: Int,
+        questionText: String,
+        questionType: String,
+        studentAnswer: String? = nil,
+        correctAnswer: String? = nil,
+        isCorrect: Bool? = nil,
+        pointsEarned: Double? = nil,
+        maxPoints: Double,
+        reviewStatus: String,
+        reviewFeedback: String? = nil
+    ) {
+        self.answerId = answerId
+        self.questionIndex = questionIndex
+        self.questionText = questionText
+        self.questionType = questionType
+        self.studentAnswer = studentAnswer
+        self.correctAnswer = correctAnswer
+        self.isCorrect = isCorrect
+        self.pointsEarned = pointsEarned
+        self.maxPoints = maxPoints
+        self.reviewStatus = reviewStatus
+        self.reviewFeedback = reviewFeedback
+    }
 
     enum CodingKeys: String, CodingKey {
         case answerId = "answer_id"

@@ -81,7 +81,7 @@ public struct TimerBar: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.CornerRadius.medium))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Tiempo restante")
-        .accessibilityValue(formattedTime)
+        .accessibilityValue(accessibleTime)
         .accessibilityAddTraits(.updatesFrequently)
     }
 
@@ -109,6 +109,19 @@ public struct TimerBar: View {
         let minutes = remainingSeconds / 60
         let seconds = remainingSeconds % 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    private var accessibleTime: String {
+        let minutes = remainingSeconds / 60
+        let seconds = remainingSeconds % 60
+        var parts: [String] = []
+        if minutes > 0 {
+            parts.append("\(minutes) \(minutes == 1 ? "minuto" : "minutos")")
+        }
+        if seconds > 0 || minutes == 0 {
+            parts.append("\(seconds) \(seconds == 1 ? "segundo" : "segundos")")
+        }
+        return parts.joined(separator: " ") + " restantes"
     }
 }
 

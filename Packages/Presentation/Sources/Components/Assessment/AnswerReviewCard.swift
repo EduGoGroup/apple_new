@@ -103,7 +103,7 @@ public struct AnswerReviewCard: View {
                 .stroke(borderColor, lineWidth: DesignTokens.BorderWidth.thin)
         )
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Pregunta \(questionNumber)")
+        .accessibilityLabel("Pregunta \(questionNumber), \(accessibleReviewStatus), \(isCorrect ? "correcta" : "incorrecta")")
     }
 
     // MARK: - Subviews
@@ -183,6 +183,15 @@ public struct AnswerReviewCard: View {
 
     private var borderColor: Color {
         isCorrect ? Color.green.opacity(0.2) : Color.red.opacity(0.2)
+    }
+
+    private var accessibleReviewStatus: String {
+        switch reviewStatus {
+        case "auto_graded": return "calificacion automatica"
+        case "pending": return "pendiente de revision"
+        case "reviewed": return "revisada por profesor"
+        default: return reviewStatus
+        }
     }
 }
 

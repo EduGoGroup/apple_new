@@ -217,15 +217,16 @@ public struct AssessmentResultView: View {
         guard let question = questionForFeedback(feedback) else {
             return "---"
         }
-        // Find the option the student selected by checking the correct option
-        // The feedback only has correctOptionId; the student answer is implicit
-        // from whether isCorrect is true
+        // When correct, the student selected the correct option
         if feedback.isCorrect {
             return question.options.first { $0.id == feedback.correctOptionId }?.text ?? "---"
         }
-        // When wrong, we don't have the student's selected option in AnswerFeedback
-        // Show a generic indicator
-        return "Respuesta incorrecta"
+        // When wrong, use studentSelectedOptionId if available from the backend
+        if let selectedId = feedback.studentSelectedOptionId,
+           let selectedOption = question.options.first(where: { $0.id == selectedId }) {
+            return selectedOption.text
+        }
+        return "---"
     }
 
     private func correctAnswerTextForFeedback(_ feedback: AnswerFeedback) -> String {

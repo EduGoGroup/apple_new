@@ -63,11 +63,16 @@ final class ServiceContainer {
 
     let toastManager: ToastManager
 
+    // MARK: - CQRS
+
+    let mediator: Mediator
+
     // MARK: - Assessment (Network Services - Infrastructure)
 
     let assessmentsNetworkService: AssessmentsNetworkService
     let attemptsNetworkService: AttemptsNetworkService
     let eligibilityNetworkService: EligibilityNetworkService
+    let assessmentReviewNetworkService: AssessmentReviewNetworkService
 
     // MARK: - Assessment (Domain Repositories & Services)
 
@@ -178,7 +183,10 @@ final class ServiceContainer {
         // 13. Feedback
         self.toastManager = ToastManager.shared
 
-        // 14. Assessment Network Services (Infrastructure layer)
+        // 14. CQRS Mediator
+        self.mediator = Mediator()
+
+        // 15. Assessment Network Services (Infrastructure layer)
         let assessmentsNetSvc = AssessmentsNetworkService(
             client: authenticatedClient,
             baseURL: config.mobileBaseURL
@@ -197,7 +205,13 @@ final class ServiceContainer {
         )
         self.eligibilityNetworkService = eligibilityNetSvc
 
-        // 15. Assessment Repositories & Services (Domain layer, wrapping Infrastructure)
+        let reviewNetSvc = AssessmentReviewNetworkService(
+            client: authenticatedClient,
+            baseURL: config.mobileBaseURL
+        )
+        self.assessmentReviewNetworkService = reviewNetSvc
+
+        // 16. Assessment Repositories & Services (Domain layer, wrapping Infrastructure)
         let assessmentsRepo = AssessmentsRepository(
             networkService: assessmentsNetSvc
         )
@@ -216,11 +230,28 @@ final class ServiceContainer {
         let cacheService = AssessmentCacheService()
         self.assessmentCacheService = cacheService
 
-        // 16. Assessment Use Cases
+        // 17. Assessment Use Cases
         self.loadAssessmentUseCase = LoadAssessmentUseCase(
             assessmentsRepository: assessmentsRepo,
             eligibilityService: eligibility,
             cacheService: cacheService
         )
+    }
+
+    // MARK: - CQRS Handler Registration
+
+    /// Registra los handlers CQRS de assessment review en el mediator.
+    /// Debe llamarse una vez al iniciar la app (contexto async).
+    func setupCQRS() async {
+        // Assessment Review Queries
+        let reviewNetSvc: any AssessmentReviewNetworkServiceProtocol = assessmentReviewNetworkService
+        await mediator.registerOrReplaceQueryHandler(GetAttemptListQueryHandler(networkService: reviewNetSvc))
+        await mediator.registerOrReplaceQueryHandler(GetAssessmentStatsQueryHandler(networkService: reviewNetSvc))
+        await mediator.registerOrReplaceQueryHandler(GetAttemptDetailQueryHandler(networkService: reviewNetSvc))
+
+        // Assessment Review Commands
+        await mediator.registerOrReplaceCommandHandler(ReviewAnswerCommandHandler(networkService: reviewNetSvc))
+        await mediator.registerOrReplaceCommandHandler(FinalizeAttemptCommandHandler(networkService: reviewNetSvc))
+        await mediator.registerOrReplaceCommandHandler(FinalizeAllCommandHandler(networkService: reviewNetSvc))
     }
 }

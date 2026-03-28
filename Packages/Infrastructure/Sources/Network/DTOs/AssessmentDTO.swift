@@ -60,6 +60,9 @@ public struct AssessmentQuestionDTO: Decodable, Sendable, Equatable {
     /// Texto de la pregunta.
     public let text: String
 
+    /// Tipo de pregunta (multiple_choice, true_false, open_ended, short_answer).
+    public let questionType: String
+
     /// Opciones de respuesta.
     public let options: [AssessmentQuestionOptionDTO]
 
@@ -72,6 +75,7 @@ public struct AssessmentQuestionDTO: Decodable, Sendable, Equatable {
     enum CodingKeys: String, CodingKey {
         case id
         case text
+        case questionType = "question_type"
         case options
         case isRequired = "is_required"
         case orderIndex = "order_index"
@@ -305,11 +309,15 @@ public struct AnswerFeedbackDTO: Decodable, Sendable, Equatable {
     /// Explicacion del feedback.
     public let explanation: String?
 
+    /// ID de la opcion que el estudiante selecciono (nil si el backend no lo incluye).
+    public let studentSelectedOptionId: String?
+
     enum CodingKeys: String, CodingKey {
         case questionId = "question_id"
         case isCorrect = "is_correct"
         case correctOptionId = "correct_option_id"
         case explanation
+        case studentSelectedOptionId = "student_selected_option_id"
     }
 }
 

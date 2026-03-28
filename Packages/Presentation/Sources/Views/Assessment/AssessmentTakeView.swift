@@ -15,7 +15,7 @@ import EduDomain
 /// ## Integration
 /// This view reads assessment data and answer state from an
 /// ``AssessmentViewModel`` passed by the parent. It does NOT own
-/// or modify the ViewModel directly -- the Phase 4 agent owns that file.
+/// or modify the ViewModel directly.
 ///
 /// ## Example
 /// ```swift
@@ -40,6 +40,7 @@ public struct AssessmentTakeView: View {
     private let elapsedSeconds: Int
     private let isSubmitting: Bool
     private let onSaveAnswer: (UUID, UUID) -> Void
+    private let onSaveTextAnswer: ((UUID, String) -> Void)?
     private let onSubmit: () async -> Void
     private let onCancel: () -> Void
 
@@ -60,6 +61,7 @@ public struct AssessmentTakeView: View {
     ///   - elapsedSeconds: Seconds elapsed since the attempt started.
     ///   - isSubmitting: Whether a submission is currently in flight.
     ///   - onSaveAnswer: Callback to persist an answer (questionId, optionId).
+    ///   - onSaveTextAnswer: Callback to persist a text answer (questionId, text). Optional for backwards compatibility.
     ///   - onSubmit: Async callback to submit the assessment.
     ///   - onCancel: Callback to cancel and leave the assessment.
     public init(
@@ -68,6 +70,7 @@ public struct AssessmentTakeView: View {
         elapsedSeconds: Int,
         isSubmitting: Bool,
         onSaveAnswer: @escaping (UUID, UUID) -> Void,
+        onSaveTextAnswer: ((UUID, String) -> Void)? = nil,
         onSubmit: @escaping () async -> Void,
         onCancel: @escaping () -> Void
     ) {
@@ -76,15 +79,18 @@ public struct AssessmentTakeView: View {
         self.elapsedSeconds = elapsedSeconds
         self.isSubmitting = isSubmitting
         self.onSaveAnswer = onSaveAnswer
+        self.onSaveTextAnswer = onSaveTextAnswer
         self.onSubmit = onSubmit
         self.onCancel = onCancel
+        self.sortedQuestions = assessment.questions.sorted { $0.orderIndex < $1.orderIndex }
     }
+
+    // MARK: - Precomputed
+
+    /// Questions sorted by orderIndex, computed once at init time.
+    private let sortedQuestions: [AssessmentQuestion]
 
     // MARK: - Computed
-
-    private var sortedQuestions: [AssessmentQuestion] {
-        assessment.questions.sorted { $0.orderIndex < $1.orderIndex }
-    }
 
     private var currentQuestion: AssessmentQuestion? {
         guard sortedQuestions.indices.contains(currentQuestionIndex) else { return nil }
@@ -190,6 +196,12 @@ public struct AssessmentTakeView: View {
         } message: {
             Text("Tu progreso se guardara y podras continuar despues si tienes intentos restantes.")
         }
+        .onChange(of: textAnswers) { oldValue, newValue in
+            guard let onSaveTextAnswer else { return }
+            for (questionId, text) in newValue where oldValue[questionId] != text {
+                onSaveTextAnswer(questionId, text)
+            }
+        }
         .disabled(isSubmitting)
         .overlay {
             if isSubmitting {
@@ -216,7 +228,7 @@ public struct AssessmentTakeView: View {
 
         QuestionView(
             question: question,
-            questionType: inferQuestionType(question),
+            questionType: QuestionView.QuestionDisplayType(rawString: question.questionType),
             selectedOptionId: answers[question.id]?.selectedOptionId,
             textAnswer: binding,
             onOptionSelected: { optionId in
@@ -279,29 +291,6 @@ public struct AssessmentTakeView: View {
             .accessibilityLabel("\(answered) de \(total) respondidas")
     }
 
-    // MARK: - Helpers
-
-    /// Infers the display type of a question based on its options.
-    ///
-    /// Since `AssessmentQuestion` from the domain layer does not carry an
-    /// explicit type field, we use heuristics:
-    /// - 2 options with true/false text -> trueFalse
-    /// - 0 options -> openEnded
-    /// - Otherwise -> multipleChoice (singleChoice)
-    private func inferQuestionType(_ question: AssessmentQuestion) -> QuestionView.QuestionDisplayType {
-        if question.options.isEmpty {
-            return .openEnded
-        }
-        if question.options.count == 2 {
-            let texts = question.options.map { $0.text.lowercased() }
-            let isTrueFalse = texts.contains(where: { $0.contains("verdadero") || $0 == "true" })
-                && texts.contains(where: { $0.contains("falso") || $0 == "false" })
-            if isTrueFalse {
-                return .trueFalse
-            }
-        }
-        return .multipleChoice
-    }
 }
 
 // MARK: - Previews

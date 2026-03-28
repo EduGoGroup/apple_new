@@ -1,25 +1,22 @@
 import Foundation
 import Observation
 import EduCore
-import EduInfrastructure
+import EduDomain
 
 /// ViewModel para la revision y calificacion de assessments por el profesor.
 ///
 /// Gestiona la carga de intentos, estadisticas, revision de respuestas
-/// individuales y finalizacion de intentos.
+/// individuales y finalizacion de intentos via CQRS Mediator.
 ///
 /// ## Responsabilidades
-/// - Cargar lista de intentos de un assessment
-/// - Cargar estadisticas del assessment
-/// - Cargar detalle de un intento para revision
-/// - Calificar respuestas individuales
-/// - Finalizar intentos individuales o masivamente
+/// - Cargar lista de intentos de un assessment (GetAttemptListQuery)
+/// - Cargar estadisticas del assessment (GetAssessmentStatsQuery)
+/// - Calificar respuestas individuales (ReviewAnswerCommand)
+/// - Finalizar intentos individuales (FinalizeAttemptCommand) o masivamente (FinalizeAllCommand)
 ///
 /// ## Ejemplo de uso
 /// ```swift
-/// let viewModel = AssessmentReviewViewModel(
-///     networkService: reviewNetworkService
-/// )
+/// let viewModel = AssessmentReviewViewModel(mediator: mediator)
 ///
 /// // En la vista
 /// .task { await viewModel.loadAttempts(assessmentId: assessmentId) }
@@ -39,11 +36,30 @@ public final class AssessmentReviewViewModel {
     /// Detalle del intento seleccionado para revision.
     public var selectedAttempt: AttemptReviewDetailDTO?
 
-    /// Indica si se esta cargando datos.
-    public var isLoading: Bool = false
+    /// Indica si se estan cargando los intentos.
+    public var isLoadingAttempts: Bool = false
 
-    /// Error actual si lo hay.
-    public var error: Error?
+    /// Indica si se esta cargando el detalle de un intento.
+    public var isLoadingDetail: Bool = false
+
+    /// Indica si se esta cargando algo (conveniencia para vistas que no distinguen).
+    public var isLoading: Bool {
+        isLoadingAttempts || isLoadingDetail
+    }
+
+    /// Error de carga de intentos.
+    public var attemptsError: Error?
+
+    /// Error de carga de detalle.
+    public var detailError: Error?
+
+    /// Error de revision (calificacion, finalizacion).
+    public var reviewError: Error?
+
+    /// Error consolidado (devuelve el primero no-nil, para retrocompatibilidad).
+    public var error: Error? {
+        attemptsError ?? detailError ?? reviewError
+    }
 
     /// Filtro de estado activo (all, pending_review, completed).
     public var filter: String = "all"
@@ -62,15 +78,15 @@ public final class AssessmentReviewViewModel {
 
     // MARK: - Dependencies
 
-    private let networkService: AssessmentReviewNetworkService
+    private let mediator: Mediator
 
     // MARK: - Initialization
 
     /// Crea un nuevo AssessmentReviewViewModel.
     ///
-    /// - Parameter networkService: Servicio de red de revision de assessments.
-    public init(networkService: AssessmentReviewNetworkService) {
-        self.networkService = networkService
+    /// - Parameter mediator: Mediator CQRS para despachar queries y commands.
+    public init(mediator: Mediator) {
+        self.mediator = mediator
     }
 
     // MARK: - Public Methods
@@ -79,18 +95,19 @@ public final class AssessmentReviewViewModel {
     ///
     /// - Parameter assessmentId: ID del assessment.
     public func loadAttempts(assessmentId: String) async {
-        guard !isLoading else { return }
+        guard !isLoadingAttempts else { return }
 
-        isLoading = true
-        error = nil
+        isLoadingAttempts = true
+        attemptsError = nil
 
         do {
-            let result = try await networkService.listAttempts(assessmentId: assessmentId)
+            let query = GetAttemptListQuery(assessmentId: assessmentId)
+            let result = try await mediator.send(query)
             self.attempts = result
-            self.isLoading = false
+            self.isLoadingAttempts = false
         } catch {
-            self.error = error
-            self.isLoading = false
+            self.attemptsError = error
+            self.isLoadingAttempts = false
         }
     }
 
@@ -98,13 +115,14 @@ public final class AssessmentReviewViewModel {
     ///
     /// - Parameter assessmentId: ID del assessment.
     public func loadStats(assessmentId: String) async {
-        error = nil
+        attemptsError = nil
 
         do {
-            let result = try await networkService.getStats(assessmentId: assessmentId)
+            let query = GetAssessmentStatsQuery(assessmentId: assessmentId)
+            let result = try await mediator.send(query)
             self.stats = result
         } catch {
-            self.error = error
+            self.attemptsError = error
         }
     }
 
@@ -112,16 +130,17 @@ public final class AssessmentReviewViewModel {
     ///
     /// - Parameter attemptId: ID del intento.
     public func loadAttemptForReview(attemptId: String) async {
-        isLoading = true
-        error = nil
+        isLoadingDetail = true
+        detailError = nil
 
         do {
-            let result = try await networkService.getAttemptForReview(attemptId: attemptId)
+            let query = GetAttemptDetailQuery(attemptId: attemptId)
+            let result = try await mediator.send(query)
             self.selectedAttempt = result
-            self.isLoading = false
+            self.isLoadingDetail = false
         } catch {
-            self.error = error
-            self.isLoading = false
+            self.detailError = error
+            self.isLoadingDetail = false
         }
     }
 
@@ -139,26 +158,27 @@ public final class AssessmentReviewViewModel {
         feedback: String
     ) async {
         isSavingReview = true
-        error = nil
+        reviewError = nil
 
         do {
-            let request = ReviewAnswerRequestDTO(
-                pointsAwarded: points,
-                feedback: feedback
-            )
-            try await networkService.reviewAnswer(
+            let command = ReviewAnswerCommand(
                 attemptId: attemptId,
                 answerId: answerId,
-                request: request
+                points: points,
+                feedback: feedback
             )
+            let result = try await mediator.execute(command)
 
-            // Recargar el detalle del intento para reflejar cambios
-            let updated = try await networkService.getAttemptForReview(attemptId: attemptId)
-            self.selectedAttempt = updated
-            self.isSavingReview = false
-            self.successMessage = "Respuesta calificada"
+            if result.isSuccess, let updated = result.getValue() {
+                self.selectedAttempt = updated
+                self.isSavingReview = false
+                self.successMessage = "Respuesta calificada"
+            } else if let error = result.getError() {
+                self.reviewError = error
+                self.isSavingReview = false
+            }
         } catch {
-            self.error = error
+            self.reviewError = error
             self.isSavingReview = false
         }
     }
@@ -168,15 +188,22 @@ public final class AssessmentReviewViewModel {
     /// - Parameter attemptId: ID del intento.
     public func finalizeAttempt(attemptId: String) async {
         isFinalizing = true
-        error = nil
+        reviewError = nil
 
         do {
-            try await networkService.finalizeAttempt(attemptId: attemptId)
-            self.selectedAttempt = nil
-            self.isFinalizing = false
-            self.successMessage = "Revision finalizada"
+            let command = FinalizeAttemptCommand(attemptId: attemptId)
+            let result = try await mediator.execute(command)
+
+            if result.isSuccess {
+                self.selectedAttempt = nil
+                self.isFinalizing = false
+                self.successMessage = "Revision finalizada"
+            } else if let error = result.getError() {
+                self.reviewError = error
+                self.isFinalizing = false
+            }
         } catch {
-            self.error = error
+            self.reviewError = error
             self.isFinalizing = false
         }
     }
@@ -186,24 +213,31 @@ public final class AssessmentReviewViewModel {
     /// - Parameter assessmentId: ID del assessment.
     public func finalizeAll(assessmentId: String) async {
         isFinalizing = true
-        error = nil
+        reviewError = nil
 
         do {
-            try await networkService.finalizeAll(assessmentId: assessmentId)
-            // Recargar la lista de intentos
-            let updated = try await networkService.listAttempts(assessmentId: assessmentId)
-            self.attempts = updated
-            self.isFinalizing = false
-            self.successMessage = "Todas las revisiones finalizadas"
+            let command = FinalizeAllCommand(assessmentId: assessmentId)
+            let result = try await mediator.execute(command)
+
+            if result.isSuccess, let updated = result.getValue() {
+                self.attempts = updated
+                self.isFinalizing = false
+                self.successMessage = "Todas las revisiones finalizadas"
+            } else if let error = result.getError() {
+                self.reviewError = error
+                self.isFinalizing = false
+            }
         } catch {
-            self.error = error
+            self.reviewError = error
             self.isFinalizing = false
         }
     }
 
-    /// Limpia el error actual.
+    /// Limpia todos los errores.
     public func clearError() {
-        error = nil
+        attemptsError = nil
+        detailError = nil
+        reviewError = nil
     }
 
     /// Limpia el mensaje de exito.
@@ -255,8 +289,14 @@ public final class AssessmentReviewViewModel {
     }
 
     /// Indica si se puede finalizar todos (hay intentos pendientes revisados).
+    ///
+    /// Requiere que existan intentos, ninguno pendiente de revision, al menos
+    /// uno en estado completable, y que no se este finalizando actualmente.
     public var canFinalizeAll: Bool {
-        !attempts.isEmpty && pendingReviewCount == 0 && !isFinalizing
+        !attempts.isEmpty
+        && pendingReviewCount == 0
+        && attempts.contains(where: { $0.status == "completed" || $0.status == "pending_review" })
+        && !isFinalizing
     }
 
     /// Indica si el intento seleccionado tiene respuestas pendientes.

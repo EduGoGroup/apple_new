@@ -105,6 +105,7 @@ struct DemoApp: App {
             .environment(\.isOnline, isOnline)
             .environment(\.eventOrchestrator, container.eventOrchestrator)
             .eduOverlays()
+            .task { await container.setupCQRS() }
             .task { await startConnectivityObserver() }
             .onOpenURL { url in
                 debugLog("DEBUG [DeepLink] received URL: \(url)")
