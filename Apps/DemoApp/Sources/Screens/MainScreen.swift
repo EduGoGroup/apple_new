@@ -325,7 +325,7 @@ struct MainScreen: View {
             let metadataBundle = try await container.syncService.syncBuckets([
                 .menu, .permissions, .availableContexts
             ])
-            let permissions = context.permissions
+            let permissions = context.permissions ?? []
             await container.menuService.updateMenu(from: metadataBundle, permissions: permissions)
 
             // Actualizar UI inmediatamente con metadata
