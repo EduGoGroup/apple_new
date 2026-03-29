@@ -121,6 +121,15 @@ public actor MaterialsRepository: MaterialsRepositoryProtocol {
         static func assessment(materialId: String) -> String {
             "/v1/materials/\(materialId)/assessment/attempts"
         }
+        static func summary(materialId: String) -> String {
+            "/v1/materials/\(materialId)/summary"
+        }
+        static func sections(materialId: String) -> String {
+            "/v1/materials/\(materialId)/sections"
+        }
+        static func downloadURL(materialId: String) -> String {
+            "/v1/materials/\(materialId)/download-url"
+        }
     }
 
     private enum Validation {
@@ -175,6 +184,56 @@ public actor MaterialsRepository: MaterialsRepositoryProtocol {
             return try await client.post(url, body: request)
         } catch let error as NetworkError {
             throw mapError(error, materialId: materialId, isAssessment: true)
+        }
+    }
+
+    // MARK: - Material Detail Methods
+
+    /// Gets the AI-generated summary of a material.
+    ///
+    /// - Parameter materialId: ID of the material (UUID string).
+    /// - Returns: Summary DTO with key points, language, and word count.
+    /// - Throws: `MaterialsRepositoryError` if the operation fails.
+    public func getSummary(materialId: String) async throws -> MaterialSummaryDTO {
+        try validateMaterialId(materialId)
+
+        let url = baseURL + Endpoints.summary(materialId: materialId)
+        do {
+            return try await client.get(url)
+        } catch let error as NetworkError {
+            throw mapError(error, materialId: materialId)
+        }
+    }
+
+    /// Gets the extracted sections of a material.
+    ///
+    /// - Parameter materialId: ID of the material (UUID string).
+    /// - Returns: Sections DTO with an array of section previews.
+    /// - Throws: `MaterialsRepositoryError` if the operation fails.
+    public func getSections(materialId: String) async throws -> MaterialSectionsDTO {
+        try validateMaterialId(materialId)
+
+        let url = baseURL + Endpoints.sections(materialId: materialId)
+        do {
+            return try await client.get(url)
+        } catch let error as NetworkError {
+            throw mapError(error, materialId: materialId)
+        }
+    }
+
+    /// Gets a presigned download URL for the material file.
+    ///
+    /// - Parameter materialId: ID of the material (UUID string).
+    /// - Returns: Presigned URL DTO with URL and expiration.
+    /// - Throws: `MaterialsRepositoryError` if the operation fails.
+    public func getDownloadURL(materialId: String) async throws -> PresignedURLDTO {
+        try validateMaterialId(materialId)
+
+        let url = baseURL + Endpoints.downloadURL(materialId: materialId)
+        do {
+            return try await client.get(url)
+        } catch let error as NetworkError {
+            throw mapError(error, materialId: materialId)
         }
     }
 

@@ -82,6 +82,16 @@ final class ServiceContainer {
     let assessmentCacheService: AssessmentCacheService
     let loadAssessmentUseCase: LoadAssessmentUseCase
 
+    // MARK: - Materials (Network Services - Infrastructure)
+
+    let materialUploadRepository: MaterialUploadRepository
+    let materialListRepository: MaterialListRepository
+
+    // MARK: - Materials (Domain - Use Cases)
+
+    let uploadMaterialUseCase: UploadMaterialUseCase
+    let listMaterialsUseCase: ListMaterialsUseCase
+
     // MARK: - Config
 
     let apiConfiguration: APIConfiguration
@@ -236,11 +246,33 @@ final class ServiceContainer {
             eligibilityService: eligibility,
             cacheService: cacheService
         )
+
+        // 18. Material Repositories (Infrastructure layer)
+        let materialUploadRepo = MaterialUploadRepository(
+            client: authenticatedClient,
+            baseURL: config.mobileBaseURL
+        )
+        self.materialUploadRepository = materialUploadRepo
+
+        let materialListRepo = MaterialListRepository(
+            client: authenticatedClient,
+            baseURL: config.mobileBaseURL
+        )
+        self.materialListRepository = materialListRepo
+
+        // 19. Material Use Cases (Domain layer)
+        self.uploadMaterialUseCase = UploadMaterialUseCase(
+            uploadRepository: materialUploadRepo
+        )
+
+        self.listMaterialsUseCase = ListMaterialsUseCase(
+            repository: materialListRepo
+        )
     }
 
     // MARK: - CQRS Handler Registration
 
-    /// Registra los handlers CQRS de assessment review en el mediator.
+    /// Registra los handlers CQRS de assessment review y materiales en el mediator.
     /// Debe llamarse una vez al iniciar la app (contexto async).
     func setupCQRS() async {
         // Assessment Review Queries
@@ -253,5 +285,16 @@ final class ServiceContainer {
         await mediator.registerOrReplaceCommandHandler(ReviewAnswerCommandHandler(networkService: reviewNetSvc))
         await mediator.registerOrReplaceCommandHandler(FinalizeAttemptCommandHandler(networkService: reviewNetSvc))
         await mediator.registerOrReplaceCommandHandler(FinalizeAllCommandHandler(networkService: reviewNetSvc))
+
+        // Material Queries
+        let listMaterialsHandler = ListMaterialsQueryHandler(useCase: listMaterialsUseCase)
+        await mediator.registerOrReplaceQueryHandler(listMaterialsHandler)
+
+        // Material Commands
+        let uploadHandler = UploadMaterialCommandHandler(
+            useCase: uploadMaterialUseCase,
+            materialListHandler: listMaterialsHandler
+        )
+        await mediator.registerOrReplaceCommandHandler(uploadHandler)
     }
 }
